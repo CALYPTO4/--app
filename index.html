@@ -89,8 +89,14 @@
   .line-row input.amount:disabled { opacity:.85; -webkit-text-fill-color:currentColor; }
   .total-row { display:flex; justify-content:space-between; font-size:12.5px; color:#5A5D51; border-top:1px solid #EEEFE9; padding:7px 0 12px; }
   .total-row b { font-weight:500; }
-  .remain { padding:12px 16px; background:#F5F6F2; border-top:1px solid #DEE0D5; display:flex; align-items:center; justify-content:space-between; }
-  .remain span:first-child { font-size:12px; color:#5A5D51; }
+  
+  /* แถบสรุปผลรวมประจำงวดแบบใหม่ ดีไซน์สะอาดตา */
+  .period-summary-box { background:#F3F4ED; border-top:2px solid #DEE0D5; padding:12px 16px; display:flex; flex-direction:column; gap:6px; font-size:12px; color:#5A5D51; }
+  .period-summary-row { display:flex; justify-content:space-between; align-items:center; }
+  .period-summary-row.grand { border-top:1px dashed #D2D4C8; padding-top:8px; margin-top:2px; font-size:13.5px; font-weight:600; color:#1E293B; }
+
+  .remain { padding:12px 16px; background:#E8E4D6; border-top:1px solid #DEE0D5; display:flex; align-items:center; justify-content:space-between; }
+  .remain span:first-child { font-size:12px; font-weight:500; color:#1E293B; }
   .remain .val { font-size:16px; font-weight:600; }
 
   h2.sub { font-family:'Noto Serif Thai',serif; font-size:18px; color:#1E293B; margin:0; }
@@ -323,7 +329,6 @@
   function liveUpdateTotals(){
     if(!state) return;
 
-    // อ่านค่าล่าสุดจากช่องกรอกทั้งหมดบนหน้าจอใส่เข้า state ทันทีแบบ Realtime
     document.querySelectorAll("input[data-bind]").forEach(function(input){
       var bind = input.getAttribute("data-bind");
       var val = input.type === "number" ? (input.value === "" ? 0 : parseFloat(input.value)) : input.value;
@@ -338,7 +343,6 @@
     var totalOutEl = document.getElementById("total-outstanding-val");
     if(totalOutEl) totalOutEl.textContent = "฿" + thb(totalOutstanding);
 
-    // ถ้ามีการเปลี่ยนเงินเดือนหรือประกันสังคม ให้คำนวณเงินเข้างวดให้อัตโนมัติ (หาร 2 จากสุทธิ)
     var numPeriods = (state.periods || []).length || 1;
     var perPeriodIncome = netSalary / numPeriods;
     (state.periods || []).forEach(function(p, pIdx){
@@ -351,7 +355,6 @@
 
     var computedCardX = cardXPerPeriod(state);
 
-    // อัปเดตช่อง CardX อัตโนมัติในแต่ละงวด
     document.querySelectorAll(".line-row.auto-row input.amount").forEach(function(inp){
       inp.value = computedCardX;
     });
@@ -364,6 +367,22 @@
 
       var invEl = document.getElementById("total-inv-" + pIdx);
       if(invEl) invEl.textContent = "฿" + thb(t.inv);
+
+      // อัปเดตแถบสรุปผลรวมท้ายงวด
+      var sumExpEl = document.getElementById("sum-exp-" + pIdx);
+      if(sumExpEl) sumExpEl.textContent = "฿" + thb(t.exp);
+
+      var sumInvEl = document.getElementById("sum-inv-" + pIdx);
+      if(sumInvEl) sumInvEl.textContent = "฿" + thb(t.inv);
+
+      var sumIncEl = document.getElementById("sum-inc-" + pIdx);
+      if(sumIncEl) sumIncEl.textContent = "฿" + thb(Number(p.income)||0);
+
+      var sumRemEl = document.getElementById("sum-rem-" + pIdx);
+      if(sumRemEl){
+        sumRemEl.textContent = "฿" + thb(t.remaining);
+        sumRemEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
+      }
 
       var remEl = document.getElementById("remain-" + pIdx);
       if(remEl){
@@ -418,7 +437,14 @@
         '<button class="add-line" data-action="add-item" data-path="' + invPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
         '<div class="total-row"><span>รวมเงินลงทุน</span><b class="mono" style="color:#1F7A53" id="total-inv-' + pIdx + '">฿' + thb(t.inv) + '</b></div>' +
       '</div>' +
-      '<div class="remain"><span>คงเหลือหลังหักทุกอย่าง</span><span class="val mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '" id="remain-' + pIdx + '">฿' + thb(t.remaining) + '</span></div>' +
+      /* แถบสรุปผลรวมภาพรวมประจำงวด */
+      '<div class="period-summary-box">' +
+        '<div class="period-summary-row"><span>รวมค่าใช้จ่ายทั้งหมด</span><b class="mono" style="color:#B3261E" id="sum-exp-' + pIdx + '">฿' + thb(t.exp) + '</b></div>' +
+        '<div class="period-summary-row"><span>รวมเงินลงทุนทั้งหมด</span><b class="mono" style="color:#1F7A53" id="sum-inv-' + pIdx + '">฿' + thb(t.inv) + '</b></div>' +
+        '<div class="period-summary-row"><span>เงินเข้างวดนี้</span><b class="mono" id="sum-inc-' + pIdx + '">฿' + thb(Number(p.income)||0) + '</b></div>' +
+        '<div class="period-summary-row grand"><span>คงเหลือสุทธิหลังหักทั้งหมด</span><b class="mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '" id="sum-rem-' + pIdx + '">฿' + thb(t.remaining) + '</b></div>' +
+      '</div>' +
+      '<div class="remain"><span>สรุปยอดคงเหลือของ ' + esc(p.label) + '</span><span class="val mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '" id="remain-' + pIdx + '">฿' + thb(t.remaining) + '</span></div>' +
     '</div>';
   }
 
@@ -512,7 +538,6 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  // พิมพ์ปุ๊บคำนวณเปลี่ยนทันทีทุกช่องแบบ Realtime โดยไม่รีเรนเดอร์หน้าจอ เคอเซอร์ไม่หลุดแน่นอน
   document.addEventListener("input", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
@@ -520,7 +545,6 @@
     liveUpdateTotals();
   });
 
-  // บันทึกข้อมูลลงฐานข้อมูลเบื้องหลังเมื่อพิมพ์เสร็จหรือเปลี่ยนช่อง
   document.addEventListener("change", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
