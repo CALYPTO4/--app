@@ -346,7 +346,7 @@
       '</div>' +
       '<div class="section">' +
         '<div class="section-title">' + ICONS.wallet + ' ค่าใช้จ่าย</div>' +
-        '<div class="link-hint">' + ICONS.link + ' สามารถพิมพ์แก้ไขตัวเลขเองได้ หรือคลิกไอคอนโซ่เพื่อผูกยอดกับบัตรเครดิตอัตโนมัติ</div>' +
+        '<div class="link-hint">' + ICONS.link + ' สามารถพิมพ์แก้ไขตัวเลขเองได้ หรือคลิกไอคอนโซ่เพื่อผูกยอดกับบัตรเครดิตอัตโนมัติ (เลือกผูกได้มากกว่า 1 ช่อง)</div>' +
         rows +
         '<button class="add-line" data-action="add-item" data-path="' + expPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
         '<div class="total-row"><span>รวมค่าใช้จ่าย</span><b class="mono" style="color:#B3261E" id="total-exp-' + pIdx + '">฿' + thb(t.exp) + '</b></div>' +
@@ -448,14 +448,10 @@
       var lpath = btn.getAttribute("data-path"), lidx = +btn.getAttribute("data-idx");
       var larr = getPath(state, lpath);
       var target = larr[lidx];
-      var turningOn = !target.cardXAuto;
-      if(turningOn){
-        var computedNow = cardXPerPeriod(state);
-        larr.forEach(function(it){ it.cardXAuto = false; });
-        target.cardXAuto = true;
-        target.amount = computedNow;
-      } else {
-        target.cardXAuto = false;
+      // ปรับปรุงให้สามารถสลับเปิด/ปิดสถานะ auto ได้อิสระแต่ละรายการ (รองรับการผูกมากกว่า 1 ช่อง)
+      target.cardXAuto = !target.cardXAuto;
+      if(target.cardXAuto){
+        target.amount = cardXPerPeriod(state);
       }
     } else if(action === "remove-item"){
       var path = btn.getAttribute("data-path"), idx = +btn.getAttribute("data-idx");
@@ -520,13 +516,7 @@
     }
 
     save();
-
-    // แก้ไขจุดนี้: ป้องกันไม่ให้ re-render ทั้งหน้าขณะพิมพ์ข้อมูลในส่วนบัตรเครดิต เพื่อไม่ให้เคอร์เซอร์หลุด/พิมพ์ตัวอักษรได้ทีละตัว
-    if(bind.indexOf("cards.") !== -1){
-      updateLiveTotals();
-    } else {
-      updateLiveTotals();
-    }
+    updateLiveTotals();
   }
 
   function updateLiveTotals(){
@@ -551,46 +541,32 @@
         p.income = netSalary / state.periods.length;
         incomeInput.value = p.income;
       }
-      var income = incomeInput ? (incomeInput.value === "" ? 0 : (parseFloat(incomeInput.value) || 0)) : p.income;
-      p.income = income;
+      var income = incomeInput ? (incomeInput.value === "" ? 0 : (parseFloat(incomeInput.value) || 0)) : (Number(p.income) || 0);
+
+      // อัปเดตช่องที่เปิดโหมด auto ให้แสดงยอดคำนวณใหม่แบบเรียลไทม์
+      if(p.expenses){
+        p.expenses.forEach(function(item, eIdx){
+          if(item.cardXAuto){
+            item.amount = computedCardX;
+            var rowInput = cardEl.querySelector('.section .line-row[data-idx="' + eIdx + '"] input.amount');
+            if(rowInput && document.activeElement !== rowInput){
+              rowInput.value = computedCardX;
+            }
+          }
+        });
+      }
 
       var t = periodTotals(p, computedCardX);
+      var expEl = document.getElementById("total-exp-" + pIdx);
+      var invEl = document.getElementById("total-inv-" + pIdx);
+      var remEl = document.getElementById("remain-" + pIdx);
 
-      var totalExpEl = document.getElementById("total-exp-" + pIdx);
-      if(totalExpEl) totalExpEl.textContent = "฿" + thb(t.exp);
-
-      var totalInvEl = document.getElementById("total-inv-" + pIdx);
-      if(totalInvEl) totalInvEl.textContent = "฿" + thb(t.inv);
-
-      var remainEl = document.getElementById("remain-" + pIdx);
-      if(remainEl){
-        remainEl.textContent = "฿" + thb(t.remaining);
-        remainEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
+      if(expEl) expEl.textContent = "฿" + thb(t.exp);
+      if(invEl) invEl.textContent = "฿" + thb(t.inv);
+      if(remEl){
+        remEl.textContent = "฿" + thb(t.remaining);
+        remEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
       }
-    });
-
-    // อัปเดตยอดบัตรเครดิตคงค้างรวมด้านบน
-    var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
-    var totalOutEl = document.querySelector(".stat-grid .stat-value.mono[style*='color:#B3261E']");
-    if(totalOutEl) totalOutEl.textContent = "฿" + thb(totalOutstanding);
-
-    // อัปเดตยอดคงเหลือย่อยในแต่ละการ์ดบัตรเครดิต
-    var cardDOMs = document.querySelectorAll(".cards-list > .card");
-    (state.cards || []).forEach(function(c, cIdx){
-      var cEl = cardDOMs[cIdx];
-      if(!cEl) return;
-      var st = cardStatus(c);
-      var cRemainEl = cEl.querySelector(".ct-remain .val");
-      if(cRemainEl) cRemainEl.textContent = "฿" + thb(st.remaining);
-
-      var progLabel = cEl.querySelector(".progress-labels span:first-child");
-      if(progLabel) progLabel.textContent = "จ่ายแล้ว " + st.paidCount + "/" + (c.months ? c.months.length : 0) + " งวด";
-      
-      var progPct = cEl.querySelector(".progress-labels span:last-child");
-      if(progPct) progPct.textContent = st.pct + "%";
-
-      var progFill = cEl.querySelector(".progress-fill");
-      if(progFill) progFill.style.width = st.pct + "%";
     });
   }
 
