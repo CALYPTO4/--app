@@ -150,7 +150,7 @@
     authDomain: "my-budget-app-1563c.firebaseapp.com",
     databaseURL: "https://my-budget-app-1563c-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "my-budget-app-1563c",
-    storageBucket: "my-budget-app-1563c.firebasestorage.app",
+    storageBucket: "my-budget-app-1563c-firebasestorage.app",
     messagingSenderId: "817244924368",
     appId: "1:817244924368:web:6d35c63feed3ee076fb1d5",
     measurementId: "G-FK628F84KM"
@@ -359,10 +359,6 @@
   }
 
   function renderPeriod(p, pIdx, computedCardX){
-    var netSalary = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
-    var splitIncome = state.periods.length > 0 ? netSalary / state.periods.length : p.income;
-    p.income = splitIncome;
-
     var t = periodTotals(p, computedCardX);
     var expPath = "periods." + pIdx + ".expenses";
     var invPath = "periods." + pIdx + ".investments";
@@ -374,7 +370,7 @@
         '<div class="left"><span class="serif" style="font-size:15px">' + esc(p.label) + '</span>' +
         '<input class="daylabel" data-bind="periods.' + pIdx + '.dayLabel" value="' + esc(p.dayLabel) + '" /></div>' +
         '<div class="income"><span>เงินเข้างวดนี้</span><span>฿</span>' +
-          '<input type="number" class="period-income-input" id="period-income-' + pIdx + '" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
+          '<input type="number" class="period-income-input" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
       '</div>' +
       '<div class="section">' +
         '<div class="section-title">' + ICONS.wallet + ' ค่าใช้จ่าย</div>' +
@@ -501,30 +497,13 @@
     var rawVal = el.value;
     var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
 
+    // ทำงานเหมือนช่องอื่นๆ ทุกประการ แค่บันทึกลง state และอัปเดตตัวเลขสุทธิ (ไม่สั่ง render ซ้ำ)
+    setDeepValue(state, bind, value);
+
     if(bind === "salary" || bind === "ssoDeduction"){
-      state[bind] = value;
       var net = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
-      
-      // อัปเดตเฉพาะข้อความเงินเดือนสุทธิโดยไม่เรนเดอร์หน้าใหม่ เคอเซอร์จึงไม่หลุด
       var netEl = document.getElementById("net-salary-val");
       if(netEl) netEl.textContent = "฿" + thb(net);
-
-      // อัปเดตช่องเงินเข้างวดและยอดรวมในโดมโดยตรง
-      if(state.periods && state.periods.length > 0){
-        var splitIncome = net / state.periods.length;
-        state.periods.forEach(function(p, pIdx){
-          p.income = splitIncome;
-          var periodInput = document.getElementById("period-income-" + pIdx);
-          if(periodInput && document.activeElement !== periodInput){
-            periodInput.value = splitIncome;
-          }
-        });
-      }
-      liveUpdateTotals();
-      save();
-      return;
-    } else {
-      setDeepValue(state, bind, value);
     }
 
     liveUpdateTotals();
