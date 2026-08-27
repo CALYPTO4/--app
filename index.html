@@ -47,7 +47,6 @@
   .stat-value { font-size:18px; font-weight:500; }
   .stat-value input { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.3); outline:none; font-size:18px; font-weight:500; color:#1E293B; width:90px; }
 
-  /* แถบปุ่มควบคุมด้านล่างการ์ดสรุป */
   .cover-actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(30,41,59,.12); }
   .btn-action-bottom { display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; background:rgba(30,41,59,.08); border:1px solid rgba(30,41,59,.15); border-radius:3px; color:#1E293B; padding:5px 12px; }
   .btn-action-bottom:hover:not(:disabled) { background:rgba(30,41,59,.15); }
@@ -196,12 +195,14 @@
   }
 
   function defaultData(){
+    var netDefault = 31450 - 875;
+    var perPeriod = netDefault / 2;
     return {
       salary: 31450,
       ssoDeduction: 875,
       periods: [
-        {id:uid(), label:"งวดที่ 1", dayLabel:"D5", income:15287.5, open:true, expenses:expenseSet(), investments:investSet()},
-        {id:uid(), label:"งวดที่ 2", dayLabel:"D20", income:15287.5, open:true, expenses:expenseSet(), investments:investSet()}
+        {id:uid(), label:"งวดที่ 1", dayLabel:"D5", income:perPeriod, open:true, expenses:expenseSet(), investments:investSet()},
+        {id:uid(), label:"งวดที่ 2", dayLabel:"D20", income:perPeriod, open:true, expenses:expenseSet(), investments:investSet()}
       ],
       cards: [
         {id:uid(), name:"CardX", note:"ผ่อนหลัก", totalAmount:38600, monthlyAmount:3860, interest:"16%", open:true,
@@ -501,6 +502,16 @@
       var net = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
       var netEl = document.getElementById("net-salary-val");
       if(netEl) netEl.textContent = "฿" + thb(net);
+
+      // คำนวณแบ่งเงินเดือนสุทธิใหม่ให้แต่ละงวดอัตโนมัติทันที
+      if(state.periods && state.periods.length > 0){
+        var splitIncome = net / state.periods.length;
+        state.periods.forEach(function(p, pIdx){
+          p.income = splitIncome;
+          var periodInput = document.querySelector('input[data-bind="periods.' + pIdx + '.income"]');
+          if(periodInput) periodInput.value = splitIncome;
+        });
+      }
     } else {
       setDeepValue(state, bind, value);
     }
