@@ -136,7 +136,7 @@
 <script>
 (function(){
   "use strict";
-  var STORAGE_KEY = "budget-passbook-standalone-v4";
+  var STORAGE_KEY = "budget-passbook-standalone-v5";
 
   function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
   function thb(n){ n = isFinite(n) ? n : 0; return n.toLocaleString("th-TH",{minimumFractionDigits:0,maximumFractionDigits:2}); }
@@ -198,17 +198,7 @@
   function load(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){ 
-        state = JSON.parse(raw); 
-        // แปลงข้อมูลเก่าถ้าเคยบันทึกเป็น ssoPercent ให้ตีเป็นยอดเงินคงที่ หรือตั้งค่าเริ่มต้น
-        if(state.ssoPercent !== undefined && state.ssoDeduction === undefined){
-          state.ssoDeduction = 875;
-          delete state.ssoPercent;
-        }
-        if(state.ssoDeduction === undefined) state.ssoDeduction = 875;
-        migrateCardXAuto(state); 
-        return; 
-      }
+      if(raw){ state = JSON.parse(raw); migrateCardXAuto(state); return; }
     }catch(e){}
     state = defaultData();
   }
