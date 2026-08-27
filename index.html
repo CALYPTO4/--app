@@ -498,10 +498,12 @@
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
-    var value = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
+    
+    // สำหรับช่องที่เป็นตัวเลขเงินเดือน/ประกันสังคม ไม่อ่านค่าแบบบังคับแปลงทันทีตอนพิมพ์ เพื่อให้พิมพ์ลบหรือกดทีละตัวได้ราบรื่น
+    var value = el.type === "number" ? el.value : el.value;
 
     if(bind === "salary" || bind === "ssoDeduction"){
-      state[bind] = value;
+      state[bind] = value === "" ? 0 : parseFloat(value) || 0;
       save();
       updateLiveTotals();
       return;
@@ -511,7 +513,7 @@
       if(pidx && idx !== null){
         var list = getPath(state, pidx);
         if(list && list[+idx]){
-          list[+idx].amount = value;
+          list[+idx].amount = value === "" ? 0 : parseFloat(value) || 0;
         }
       }
     } else {
@@ -530,14 +532,12 @@
   function updateLiveTotals(){
     var salaryEl = document.getElementById("salary-input");
     var ssoEl = document.getElementById("sso-input");
-    if(salaryEl) state.salary = parseFloat(salaryEl.value) || 0;
-    if(ssoEl) state.ssoDeduction = parseFloat(ssoEl.value) || 0;
+    if(salaryEl) state.salary = salaryEl.value === "" ? 0 : (parseFloat(salaryEl.value) || 0);
+    if(ssoEl) state.ssoDeduction = ssoEl.value === "" ? 0 : (parseFloat(ssoEl.value) || 0);
 
     var netSalary = state.salary - (Number(state.ssoDeduction) || 0);
     var netSalaryEl = document.getElementById("net-salary-val");
     if(netSalaryEl) netSalaryEl.textContent = "฿" + thb(netSalary);
-
-    var splitIncome = netSalary / ((state.periods && state.periods.length) || 1);
 
     var computedCardX = cardXPerPeriod(state);
     var cardEls = document.querySelectorAll(".periods-grid .card");
@@ -547,10 +547,6 @@
       if(!cardEl) return;
 
       var incomeInput = cardEl.querySelector(".p-head .income input");
-      if(incomeInput && document.activeElement !== incomeInput){
-        p.income = splitIncome;
-        incomeInput.value = splitIncome;
-      }
       var income = incomeInput ? (parseFloat(incomeInput.value) || 0) : p.income;
       p.income = income;
 
@@ -568,9 +564,9 @@
       }
 
       var invSection = cardEl.querySelectorAll(".section")[1];
-      var totalInv = 0;
       if(invSection){
         var invInputs = invSection.querySelectorAll("input.amount");
+        var totalInv = 0;
         invInputs.forEach(function(input, idx){
           var val = parseFloat(input.value) || 0;
           totalInv += val;
@@ -580,29 +576,22 @@
         if(invTotalRow) invTotalRow.textContent = "฿" + thb(totalInv);
       }
 
-      var currentExp = p.expenses ? p.expenses.reduce(function(s,i){return s+effectiveAmount(i, computedCardX);},0) : 0;
-      var currentInv = p.investments ? p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0) : 0;
-      var remaining = income - currentExp - currentInv;
-
-      var remainVal = cardEl.querySelector(".remain .val");
-      if(remainVal){
-        remainVal.textContent = "฿" + thb(remaining);
-        remainVal.style.color = remaining < 0 ? "#B3261E" : "#1E293B";
+      var remainEl = cardEl.querySelector(".remain .val");
+      if(remainEl){
+        var currentExp = p.expenses ? p.expenses.reduce(function(s,i){return s+effectiveAmount(i, computedCardX);},0) : 0;
+        var currentInv = p.investments ? p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0) : 0;
+        var rem = income - currentExp - currentInv;
+        remainEl.textContent = "฿" + thb(rem);
+        remainEl.style.color = rem < 0 ? "#B3261E" : "#1E293B";
       }
     });
-
-    var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
-    var statValues = document.querySelectorAll(".stat-value.mono");
-    if(statValues.length >= 2){
-      statValues[1].textContent = "฿" + thb(totalOutstanding);
-    }
   }
 
   document.addEventListener("click", handleClick);
   document.addEventListener("input", handleInput);
 
-  // เริ่มต้นทำงานและเชื่อมต่อฐานข้อมูล Firebase
   initFirebaseSync();
+
 })();
 </script>
 </body>
