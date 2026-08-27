@@ -519,7 +519,7 @@
     updateLiveTotals();
   }
 
- function updateLiveTotals(){
+function updateLiveTotals(){
     var salaryEl = document.getElementById("salary-input");
     var ssoEl = document.getElementById("sso-input");
     if(salaryEl) state.salary = salaryEl.value === "" ? 0 : (parseFloat(salaryEl.value) || 0);
@@ -580,6 +580,7 @@
     var rawVal = el.value;
     var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
 
+    // อัปเดตค่าลงใน state ทันทีตาม data-bind โดยไม่สั่ง render() หน้าจอใหม่ เพื่อป้องกันเคอร์เซอร์หลุดและตัวอักษรหาย
     if(bind === "salary" || bind === "ssoDeduction"){
       state[bind] = value;
     } else if(bind.indexOf(".expenses.") !== -1 || bind.indexOf(".investments.") !== -1){
@@ -588,14 +589,14 @@
       if(pidx && idx !== null){
         var list = getPath(state, pidx);
         if(list && list[+idx]){
-          list[+idx].amount = value;
+          // เช็คว่าเป็นช่องแก้ชื่อ (name) หรือจำนวนเงิน (amount)
+          if(bind.indexOf(".name") !== -1){
+            list[+idx].name = value;
+          } else {
+            list[+idx].amount = value;
+          }
         }
       }
-    } else if(bind.indexOf(".name") !== -1 || bind.indexOf(".note") !== -1 || bind.indexOf(".interest") !== -1 || bind.indexOf("dayLabel") !== -1){
-      // อัปเดตค่าข้อความโดยตรงใน state โดยไม่ต้องสั่ง render() ใหม่ เพื่อป้องกันเคอร์เซอร์เด้งหรือตัวอักษรหาย
-      setPath(state, bind, value);
-      save();
-      return;
     } else {
       setPath(state, bind, value);
     }
