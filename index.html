@@ -141,7 +141,6 @@
 (function(){
   "use strict";
 
-  // TODO: นำค่า Config ของคุณมาใส่ตรงนี้
   var firebaseConfig = {
     apiKey: "AIzaSyAxijI_T_w4n26JMFmoTuYWlTyaJJkjio8",
     authDomain: "my-budget-app-1563c.firebaseapp.com",
@@ -200,11 +199,11 @@
       ],
       cards: [
         {id:uid(), name:"CardX", note:"ผ่อนหลัก", totalAmount:38600, monthlyAmount:3860, interest:"16%", open:true,
-          months: monthsFrom(["4/26","5/26","6/26","7/26","8/26","9/26","10/26","11/26","12/26","1/27"], 4)},
+         months: monthsFrom(["4/26","5/26","6/26","7/26","8/26","9/26","10/26","11/26","12/26","1/27"], 4)},
         {id:uid(), name:"CardX", note:"Oppo", totalAmount:10000, monthlyAmount:1000, interest:"0%", open:true,
-          months: monthsFrom(["7/26","8/26","9/26","10/26","11/26","12/26","1/27","2/27","3/27","4/27"], 1)},
+         months: monthsFrom(["7/26","8/26","9/26","10/26","11/26","12/26","1/27","2/27","3/27","4/27"], 1)},
         {id:uid(), name:"CardX", note:"หัวหิน", totalAmount:10068, monthlyAmount:2517, interest:"0%", open:true,
-          months: monthsFrom(["8/26","9/26","10/26","11/26"], 0)}
+         months: monthsFrom(["8/26","9/26","10/26","11/26"], 0)}
       ]
     };
   }
@@ -499,8 +498,7 @@
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
     
-    // สำหรับช่องที่เป็นตัวเลขเงินเดือน/ประกันสังคม ไม่อ่านค่าแบบบังคับแปลงทันทีตอนพิมพ์ เพื่อให้พิมพ์ลบหรือกดทีละตัวได้ราบรื่น
-    var value = el.type === "number" ? el.value : el.value;
+    var value = el.value;
 
     if(bind === "salary" || bind === "ssoDeduction"){
       state[bind] = value === "" ? 0 : parseFloat(value) || 0;
@@ -573,7 +571,7 @@
           if(p.investments && p.investments[idx]) p.investments[idx].amount = val;
         });
         var invTotalRow = invSection.querySelector(".total-row b");
-        if(invTotalRow) invTotalRow.textContent = "฿" + thb(totalInv);
+        if(invTotalRow) invTotalRow.textContent = "฿" + thb(invTotalRow);
       }
 
       var remainEl = cardEl.querySelector(".remain .val");
