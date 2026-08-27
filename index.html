@@ -150,7 +150,7 @@
   .cards-list { display:flex; flex-direction:column; gap:16px; margin-bottom:20px; }
 </style>
 
-<!-- Firebase SDK -->
+<!-- Firebase SDK (ใช้แบบระมัดระวัง ไม่ให้บล็อกการแสดงผลหากโหลดไม่ผ่าน) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
@@ -172,10 +172,17 @@
     measurementId: "G-FK628F84KM"
   };
 
-  if(!firebase.apps.length){
-    firebase.initializeApp(firebaseConfig);
+  var dbRef = null;
+  try {
+    if(typeof firebase !== "undefined" && !firebase.apps.length){
+      firebase.initializeApp(firebaseConfig);
+      dbRef = firebase.database().ref("budget_data");
+    } else if(typeof firebase !== "undefined" && firebase.apps.length){
+      dbRef = firebase.database().ref("budget_data");
+    }
+  } catch(e) {
+    console.warn("Firebase Init Error:", e);
   }
-  var dbRef = firebase.database().ref("budget_data");
 
   function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
   function thb(n){ n = isFinite(n) ? n : 0; return n.toLocaleString("th-TH",{minimumFractionDigits:0,maximumFractionDigits:2}); }
@@ -326,6 +333,19 @@
   function save(){
     saveStatus = "กำลังบันทึก...";
     renderStatusOnly();
+    
+    // บันทึกลงเครื่องผู้ใช้ก่อนเสมอเพื่อความลื่นไหล
+    try {
+      localStorage.setItem("my_budget_app_data", JSON.stringify(state));
+    } catch(e){}
+
+    if(!dbRef){
+      saveStatus = "บันทึกในเครื่องแล้ว";
+      renderStatusOnly();
+      setTimeout(function(){ if(saveStatus==="บันทึกในเครื่องแล้ว"){ saveStatus=""; renderStatusOnly(); } }, 1500);
+      return;
+    }
+
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function(){
       isRemoteUpdating = true;
@@ -336,7 +356,7 @@
         setTimeout(function(){ if(saveStatus==="บันทึกเรียบร้อย"){ saveStatus=""; renderStatusOnly(); } }, 1500);
       }).catch(function(e){
         isRemoteUpdating = false;
-        saveStatus = "บันทึกไม่สำเร็จ";
+        saveStatus = "บันทึกในเครื่อง (Offline)";
         renderStatusOnly();
       });
     }, 400);
@@ -690,50 +710,63 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  function initFirebaseSync(){
-    saveStatus = "กำลังโหลดข้อมูล...";
-    renderStatusOnly();
-
-    dbRef.once("value").then(function(snapshot){
-      var val = snapshot.val();
-      if(val){
-        state = val;
-        if(!state.history){
-          var oldData = JSON.parse(JSON.stringify(state));
-          state = {
-            selectedMonth: "08/2569",
-            history: { "08/2569": oldData }
-          };
-        }
-        if(!state.selectedMonth) state.selectedMonth = "08/2569";
-        var cur = getCurrentMonthData();
-        migrateCardXAuto(cur);
-      } else {
-        state = defaultData();
-        dbRef.set(state);
+  function initApp(){
+    // โหลดข้อมูลจาก LocalStorage ก่อนเสมอเพื่อให้แสดงผลได้ทันที 100%
+    try {
+      var localData = localStorage.getItem("my_budget_app_data");
+      if(localData){
+        state = JSON.parse(localData);
       }
-      saveStatus = "";
-      render();
+    } catch(e){}
 
-      dbRef.on("value", function(snap){
-        if(isRemoteUpdating) return;
-        var rVal = snap.val();
-        if(rVal){
-          state = rVal;
+    if(!state){
+      state = defaultData();
+    }
+
+    if(!state.history){
+      var oldData = JSON.parse(JSON.stringify(state));
+      state = {
+        selectedMonth: "08/2569",
+        history: { "08/2569": oldData }
+      };
+    }
+    if(!state.selectedMonth) state.selectedMonth = "08/2569";
+    migrateCardXAuto(getCurrentMonthData());
+
+    render();
+
+    // ถ้าย후 Firebase ทำงานได้ ให้ดึงข้อมูลมาซิงค์แบบ Background
+    if(dbRef){
+      dbRef.once("value").then(function(snapshot){
+        var val = snapshot.val();
+        if(val){
+          state = val;
           if(!state.history){
             var oldData = JSON.parse(JSON.stringify(state));
             state = { selectedMonth: "08/2569", history: { "08/2569": oldData } };
           }
           if(!state.selectedMonth) state.selectedMonth = "08/2569";
+          migrateCardXAuto(getCurrentMonthData());
           render();
         }
-      });
 
-    }).catch(function(err){
-      state = defaultData();
-      saveStatus = "";
-      render();
-    });
+        dbRef.on("value", function(snap){
+          if(isRemoteUpdating) return;
+          var rVal = snap.val();
+          if(rVal){
+            state = rVal;
+            if(!state.history){
+              var oldData = JSON.parse(JSON.stringify(state));
+              state = { selectedMonth: "08/2569", history: { "08/2569": oldData } };
+            }
+            if(!state.selectedMonth) state.selectedMonth = "08/2569";
+            render();
+          }
+        });
+      }).catch(function(err){
+        console.warn("Firebase fetch skipped, using local storage.");
+      });
+    }
   }
 
   document.addEventListener("input", function(e){
@@ -885,7 +918,7 @@
     }
   });
 
-  initFirebaseSync();
+  initApp();
 
 })();
 </script>
