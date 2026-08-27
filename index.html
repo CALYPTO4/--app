@@ -559,39 +559,28 @@
         var expInputs = expSection.querySelectorAll("input.amount");
         if(p.expenses){
           p.expenses.forEach(function(item, i){
-            if(!item.cardXAuto && expInputs[i] && document.activeElement !== expInputs[i]){
-              item.amount = expInputs[i].value === "" ? 0 : (parseFloat(expInputs[i].value) || 0);
-            }
-          });
-        }
-      }
-
-      var invSection = cardEl.querySelectorAll(".section")[1];
-      if(invSection){
-        var invInputs = invSection.querySelectorAll("input.amount");
-        if(p.investments){
-          p.investments.forEach(function(item, i){
-            if(invInputs[i] && document.activeElement !== invInputs[i]){
-              item.amount = invInputs[i].value === "" ? 0 : (parseFloat(invInputs[i].value) || 0);
+            if(item.cardXAuto && expInputs[i]) {
+              expInputs[i].value = computedCardX;
             }
           });
         }
       }
 
       var t = periodTotals(p, computedCardX);
-
-      var totalExpEl = document.getElementById("total-exp-" + pIdx);
-      if(totalExpEl) totalExpEl.textContent = "฿" + thb(t.exp);
-
-      var totalInvEl = document.getElementById("total-inv-" + pIdx);
-      if(totalInvEl) totalInvEl.textContent = "฿" + thb(t.inv);
-
+      var expEl = document.getElementById("total-exp-" + pIdx);
+      var invEl = document.getElementById("total-inv-" + pIdx);
       var remainEl = document.getElementById("remain-" + pIdx);
-      if(remainEl){
+
+      if(expEl) expEl.textContent = "฿" + thb(t.exp);
+      if(invEl) invEl.textContent = "฿" + thb(t.inv);
+      if(remainEl) {
         remainEl.textContent = "฿" + thb(t.remaining);
         remainEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
       }
     });
+
+    var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; }, 0);
+    // อัปเดตยอดรวมบัตรเครดิตคงค้างในส่วน cover ถ้ามี
   }
 
   document.addEventListener("click", handleClick);
