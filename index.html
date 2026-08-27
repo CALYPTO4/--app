@@ -141,7 +141,6 @@
 (function(){
   "use strict";
 
-  // TODO: นำค่า Config ของคุณมาใส่ตรงนี้
   var firebaseConfig = {
     apiKey: "AIzaSyAxijI_T_w4n26JMFmoTuYWlTyaJJkjio8",
     authDomain: "my-budget-app-1563c.firebaseapp.com",
@@ -200,11 +199,11 @@
       ],
       cards: [
         {id:uid(), name:"CardX", note:"ผ่อนหลัก", totalAmount:38600, monthlyAmount:3860, interest:"16%", open:true,
-          months: monthsFrom(["4/26","5/26","6/26","7/26","8/26","9/26","10/26","11/26","12/26","1/27"], 4)},
+         months: monthsFrom(["4/26","5/26","6/26","7/26","8/26","9/26","10/26","11/26","12/26","1/27"], 4)},
         {id:uid(), name:"CardX", note:"Oppo", totalAmount:10000, monthlyAmount:1000, interest:"0%", open:true,
-          months: monthsFrom(["7/26","8/26","9/26","10/26","11/26","12/26","1/27","2/27","3/27","4/27"], 1)},
+         months: monthsFrom(["7/26","8/26","9/26","10/26","11/26","12/26","1/27","2/27","3/27","4/27"], 1)},
         {id:uid(), name:"CardX", note:"หัวหิน", totalAmount:10068, monthlyAmount:2517, interest:"0%", open:true,
-          months: monthsFrom(["8/26","9/26","10/26","11/26"], 0)}
+         months: monthsFrom(["8/26","9/26","10/26","11/26"], 0)}
       ]
     };
   }
@@ -252,7 +251,7 @@
         saveStatus = "บันทึกไม่สำเร็จ";
         renderStatusOnly();
       });
-    }, 300);
+    }, 500);
   }
 
   function renderStatusOnly(){
@@ -350,15 +349,15 @@
         '<div class="link-hint">' + ICONS.link + ' สามารถพิมพ์แก้ไขตัวเลขเองได้ หรือคลิกไอคอนโซ่เพื่อผูกยอดกับบัตรเครดิตอัตโนมัติ</div>' +
         rows +
         '<button class="add-line" data-action="add-item" data-path="' + expPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
-        '<div class="total-row"><span>รวมค่าใช้จ่าย</span><b class="mono" style="color:#B3261E">฿' + thb(t.exp) + '</b></div>' +
+        '<div class="total-row"><span>รวมค่าใช้จ่าย</span><b class="mono" style="color:#B3261E" id="total-exp-' + pIdx + '">฿' + thb(t.exp) + '</b></div>' +
       '</div>' +
       '<div class="section" style="border-top:1px solid #EEEFE9">' +
         '<div class="section-title">' + ICONS.piggy + ' เงินลงทุน</div>' +
         invRows +
         '<button class="add-line" data-action="add-item" data-path="' + invPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
-        '<div class="total-row"><span>รวมเงินลงทุน</span><b class="mono" style="color:#1F7A53">฿' + thb(t.inv) + '</b></div>' +
+        '<div class="total-row"><span>รวมเงินลงทุน</span><b class="mono" style="color:#1F7A53" id="total-inv-' + pIdx + '">฿' + thb(t.inv) + '</b></div>' +
       '</div>' +
-      '<div class="remain"><span>คงเหลือหลังหักทุกอย่าง</span><span class="val mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '">฿' + thb(t.remaining) + '</span></div>' +
+      '<div class="remain"><span>คงเหลือหลังหักทุกอย่าง</span><span class="val mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '" id="remain-' + pIdx + '">฿' + thb(t.remaining) + '</span></div>' +
     '</div>';
   }
 
@@ -498,7 +497,9 @@
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
-    var value = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
+    
+    var rawVal = el.value;
+    var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
 
     if(bind === "salary" || bind === "ssoDeduction"){
       state[bind] = value;
@@ -519,7 +520,7 @@
     }
 
     save();
-    
+
     if(bind.indexOf("cards.") !== -1){
       render();
     } else {
@@ -530,18 +531,17 @@
   function updateLiveTotals(){
     var salaryEl = document.getElementById("salary-input");
     var ssoEl = document.getElementById("sso-input");
-    if(salaryEl) state.salary = parseFloat(salaryEl.value) || 0;
-    if(ssoEl) state.ssoDeduction = parseFloat(ssoEl.value) || 0;
+    if(salaryEl) state.salary = salaryEl.value === "" ? 0 : (parseFloat(salaryEl.value) || 0);
+    if(ssoEl) state.ssoDeduction = ssoEl.value === "" ? 0 : (parseFloat(ssoEl.value) || 0);
 
     var netSalary = state.salary - (Number(state.ssoDeduction) || 0);
     var netSalaryEl = document.getElementById("net-salary-val");
     if(netSalaryEl) netSalaryEl.textContent = "฿" + thb(netSalary);
 
     var splitIncome = netSalary / ((state.periods && state.periods.length) || 1);
-
     var computedCardX = cardXPerPeriod(state);
     var cardEls = document.querySelectorAll(".periods-grid .card");
-    
+
     (state.periods || []).forEach(function(p, pIdx){
       var cardEl = cardEls[pIdx];
       if(!cardEl) return;
@@ -551,57 +551,52 @@
         p.income = splitIncome;
         incomeInput.value = splitIncome;
       }
-      var income = incomeInput ? (parseFloat(incomeInput.value) || 0) : p.income;
+      var income = incomeInput ? (incomeInput.value === "" ? 0 : (parseFloat(incomeInput.value) || 0)) : p.income;
       p.income = income;
 
       var expSection = cardEl.querySelectorAll(".section")[0];
       if(expSection){
         var expInputs = expSection.querySelectorAll("input.amount");
-        var totalExp = 0;
-        expInputs.forEach(function(input, idx){
-          var val = parseFloat(input.value) || 0;
-          totalExp += val;
-          if(p.expenses && p.expenses[idx]) p.expenses[idx].amount = val;
-        });
-        var expTotalRow = expSection.querySelector(".total-row b");
-        if(expTotalRow) expTotalRow.textContent = "฿" + thb(totalExp);
+        if(p.expenses){
+          p.expenses.forEach(function(item, i){
+            if(!item.cardXAuto && expInputs[i] && document.activeElement !== expInputs[i]){
+              item.amount = expInputs[i].value === "" ? 0 : (parseFloat(expInputs[i].value) || 0);
+            }
+          });
+        }
       }
 
       var invSection = cardEl.querySelectorAll(".section")[1];
-      var totalInv = 0;
       if(invSection){
         var invInputs = invSection.querySelectorAll("input.amount");
-        invInputs.forEach(function(input, idx){
-          var val = parseFloat(input.value) || 0;
-          totalInv += val;
-          if(p.investments && p.investments[idx]) p.investments[idx].amount = val;
-        });
-        var invTotalRow = invSection.querySelector(".total-row b");
-        if(invTotalRow) invTotalRow.textContent = "฿" + thb(totalInv);
+        if(p.investments){
+          p.investments.forEach(function(item, i){
+            if(invInputs[i] && document.activeElement !== invInputs[i]){
+              item.amount = invInputs[i].value === "" ? 0 : (parseFloat(invInputs[i].value) || 0);
+            }
+          });
+        }
       }
 
-      var currentExp = p.expenses ? p.expenses.reduce(function(s,i){return s+effectiveAmount(i, computedCardX);},0) : 0;
-      var currentInv = p.investments ? p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0) : 0;
-      var remaining = income - currentExp - currentInv;
+      var t = periodTotals(p, computedCardX);
 
-      var remainVal = cardEl.querySelector(".remain .val");
-      if(remainVal){
-        remainVal.textContent = "฿" + thb(remaining);
-        remainVal.style.color = remaining < 0 ? "#B3261E" : "#1E293B";
+      var totalExpEl = document.getElementById("total-exp-" + pIdx);
+      if(totalExpEl) totalExpEl.textContent = "฿" + thb(t.exp);
+
+      var totalInvEl = document.getElementById("total-inv-" + pIdx);
+      if(totalInvEl) totalInvEl.textContent = "฿" + thb(t.inv);
+
+      var remainEl = document.getElementById("remain-" + pIdx);
+      if(remainEl){
+        remainEl.textContent = "฿" + thb(t.remaining);
+        remainEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
       }
     });
-
-    var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
-    var statValues = document.querySelectorAll(".stat-value.mono");
-    if(statValues.length >= 2){
-      statValues[1].textContent = "฿" + thb(totalOutstanding);
-    }
   }
 
   document.addEventListener("click", handleClick);
   document.addEventListener("input", handleInput);
 
-  // เริ่มต้นทำงานและเชื่อมต่อฐานข้อมูล Firebase
   initFirebaseSync();
 })();
 </script>
