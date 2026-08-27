@@ -359,6 +359,10 @@
   }
 
   function renderPeriod(p, pIdx, computedCardX){
+    var netSalary = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
+    var splitIncome = state.periods.length > 0 ? netSalary / state.periods.length : p.income;
+    p.income = splitIncome; // บังคับอัปเดตค่าเงินเข้างวดให้เท่ากับยอดสุทธิหารจำนวนงวดสดๆ เสมอ
+
     var t = periodTotals(p, computedCardX);
     var expPath = "periods." + pIdx + ".expenses";
     var invPath = "periods." + pIdx + ".investments";
@@ -503,15 +507,16 @@
       var netEl = document.getElementById("net-salary-val");
       if(netEl) netEl.textContent = "฿" + thb(net);
 
-      // คำนวณแบ่งเงินเดือนสุทธิใหม่ให้แต่ละงวดอัตโนมัติทันที
+      // บังคับหารเงินเดือนสุทธิตามจำนวนงวดทันที
       if(state.periods && state.periods.length > 0){
         var splitIncome = net / state.periods.length;
         state.periods.forEach(function(p, pIdx){
           p.income = splitIncome;
-          var periodInput = document.querySelector('input[data-bind="periods.' + pIdx + '.income"]');
-          if(periodInput) periodInput.value = splitIncome;
         });
       }
+      render(); // บังคับรีเฟรชหน้าจอทั้งหมดเพื่อให้ตัวเลขในกล่องงวดเปลี่ยนตามทันที
+      save();
+      return;
     } else {
       setDeepValue(state, bind, value);
     }
