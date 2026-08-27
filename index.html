@@ -12,7 +12,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 
-<title>สมุดบัญชีงบประมาณ (Realtime Non-Blocking)</title>
+<title>สมุดบัญชีงบประมาณ (Realtime)</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <style>
@@ -319,36 +319,15 @@
     });
   }
 
-  // คำนวณและอัปเดตตัวเลขสรุปหน้าจอแบบ Realtime ทันทีที่พิมพ์โดยไม่ทำให้เคอเซอร์หลุด
+  // คำนวณและอัปเดตตัวเลขทุกตัวบนหน้าจอแบบ Realtime ทันทีที่พิมพ์ โดยไม่ทำลาย DOM หรือทำให้เคอเซอร์หลุด
   function liveUpdateTotals(){
     if(!state) return;
-    
-    // ดึงค่าสดๆ จากช่อง Input บนหน้าจอมาคำนวณทันที เพื่อความแม่นยำสูงสุดขณะพิมพ์
-    var salaryInput = document.getElementById("salary-input");
-    var ssoInput = document.getElementById("sso-input");
-    if(salaryInput) state.salary = salaryInput.value === "" ? 0 : parseFloat(salaryInput.value);
-    if(ssoInput) state.ssoDeduction = ssoInput.value === "" ? 0 : parseFloat(ssoInput.value);
 
-    // อัปเดตรายรับแต่ละงวดจาก input จริงบนหน้าจอ
-    (state.periods || []).forEach(function(p, pIdx){
-      var incInput = document.querySelector('input[data-bind="periods.' + pIdx + '.income"]');
-      if(incInput) p.income = incInput.value === "" ? 0 : parseFloat(incInput.value);
-
-      // อัปเดตค่าใช้จ่ายจาก input จริงบนหน้าจอ
-      if(p.expenses){
-        p.expenses.forEach(function(item, i){
-          if(item.cardXAuto) return;
-          var amtInput = document.querySelector('input[data-bind="periods.' + pIdx + '.expenses.' + i + '.amount"]');
-          if(amtInput) item.amount = amtInput.value === "" ? 0 : parseFloat(amtInput.value);
-        });
-      }
-      // อัปเดตเงินลงทุนจาก input จริงบนหน้าจอ
-      if(p.investments){
-        p.investments.forEach(function(item, i){
-          var amtInput = document.querySelector('input[data-bind="periods.' + pIdx + '.investments.' + i + '.amount"]');
-          if(amtInput) item.amount = amtInput.value === "" ? 0 : parseFloat(amtInput.value);
-        });
-      }
+    // อ่านค่าล่าสุดจากช่องกรอกทั้งหมดบนหน้าจอใส่เข้า state ทันทีแบบ Realtime
+    document.querySelectorAll("input[data-bind]").forEach(function(input){
+      var bind = input.getAttribute("data-bind");
+      var val = input.type === "number" ? (input.value === "" ? 0 : parseFloat(input.value)) : input.value;
+      setDeepValue(state, bind, val);
     });
 
     var netSalary = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
@@ -360,6 +339,11 @@
     if(totalOutEl) totalOutEl.textContent = "฿" + thb(totalOutstanding);
 
     var computedCardX = cardXPerPeriod(state);
+
+    // อัปเดตช่อง CardX อัตโนมัติในแต่ละงวด
+    document.querySelectorAll(".line-row.auto-row input.amount").forEach(function(inp){
+      inp.value = computedCardX;
+    });
 
     (state.periods || []).forEach(function(p, pIdx){
       var t = periodTotals(p, computedCardX);
@@ -517,30 +501,21 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  // พิมพ์ปุ๊บ คำนวณสดทันทีแบบ Realtime โดยไม่รีเรนเดอร์หน้าจอใหม่ เคอเซอร์จึงไม่หลุด
+  // พิมพ์ปุ๊บคำนวณเปลี่ยนทันทีทุกช่องแบบ Realtime โดยไม่รีเรนเดอร์หน้าจอ เคอเซอร์ไม่หลุดแน่นอน
   document.addEventListener("input", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
-
-    var rawVal = el.value;
-    var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
-    setDeepValue(state, bind, value);
-
     liveUpdateTotals();
   });
 
-  // บันทึกข้อมูลลง Firebase เมื่อพิมพ์เสร็จหรือกดออกจากช่อง
+  // บันทึกข้อมูลลงฐานข้อมูลเบื้องหลังเมื่อพิมพ์เสร็จหรือเปลี่ยนช่อง
   document.addEventListener("change", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
 
     pushUndo();
-    var rawVal = el.value;
-    var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
-    setDeepValue(state, bind, value);
-
     liveUpdateTotals();
     save();
   });
