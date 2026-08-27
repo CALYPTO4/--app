@@ -215,7 +215,7 @@
     var el = document.getElementById("save-status");
     if(!el) return;
     el.className = "save-status" + (saveStatus==="error" ? " err" : "");
-    el.textContent = saveStatus==="saving" ? "กำลังบันทึก..." : saveStatus==="saved" ? "บันทึกแล้ว" : saveStatus==="error" ? "บันทึกไม่สำเร็จ (พื้นที่จัดเก็บเต็มหรือถูกบล็อก)" : "";
+    el.textContent = saveStatus==="saving" ? "กำลังบันทึก..." : saveStatus==="saved" ? "บันทึกแล้ว" : saveStatus==="error" ? "บันทึกไม่สำเร็จ" : "";
   }
 
   function getPath(obj, path){
@@ -278,7 +278,7 @@
         linkBtn +
         '<input class="name" data-bind="' + path + '.' + idx + '.name" value="' + esc(item.name) + '" placeholder="รายการ" />' +
         (isAuto ? '<span class="auto-badge">อัตโนมัติ</span>' : '') +
-        '<div class="amt"><span>฿</span><input class="amount ' + accentClass + '" type="number" data-bind="' + path + '.' + idx + '.amount" value="' + displayAmount + '"' + (isAuto?' disabled':'') + ' /></div>' +
+        '<div class="amt"><span>฿</span><input class="amount ' + accentClass + '" type="number" data-bind="' + path + '.' + idx + '.amount" data-path="' + path + '" data-idx="' + idx + '" value="' + displayAmount + '"' + (isAuto?' disabled':'') + ' /></div>' +
         '<button class="rm" data-action="remove-item" data-path="' + path + '" data-idx="' + idx + '">' + ICONS.trash + '</button>' +
       '</div>';
   }
@@ -290,7 +290,7 @@
     var rows = p.expenses.map(function(it,i){ return renderLineRow(it, i, expPath, "red", {linkable:true, computedCardX:computedCardX}); }).join("");
     var invRows = p.investments.map(function(it,i){ return renderLineRow(it, i, invPath, "green"); }).join("");
     return '' +
-    '<div class="card">' +
+    '<div class="card" data-pidx="' + pIdx + '">' +
       '<div class="p-head">' +
         '<div class="left"><span class="serif" style="font-size:15px">' + esc(p.label) + '</span>' +
         '<input class="daylabel" data-bind="periods.' + pIdx + '.dayLabel" value="' + esc(p.dayLabel) + '" /></div>' +
@@ -448,12 +448,27 @@
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
     var value = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
-    setPath(state, bind, value);
+
+    // กรณีแก้ไขช่อง amount ของรายการค่าใช้จ่ายหรือเงินลงทุนโดยตรง ให้ระบุตำแหน่งที่แน่นอนเพื่อไม่ให้ข้อมูลสลับกัน
+    if(bind.indexOf(".expenses.") !== -1 || bind.indexOf(".investments.") !== -1){
+      var pidx = el.getAttribute("data-path");
+      var idx = el.getAttribute("data-idx");
+      if(pidx && idx !== null){
+        var list = getPath(state, pidx);
+        if(list && list[+idx]){
+          list[+idx].amount = value;
+        }
+      }
+    } else {
+      setPath(state, bind, value);
+    }
+
     save();
     updateLiveTotals();
   }
 
   function updateLiveTotals(){
+    var computedCardX = cardXPerPeriod(state);
     var cardEls = document.querySelectorAll(".periods-grid .card");
     
     state.periods.forEach(function(p, pIdx){
@@ -465,9 +480,6 @@
       expInputs.forEach(function(input, itemIdx){
         var val = parseFloat(input.value) || 0;
         totalExp += val;
-        if(p.expenses[itemIdx]){
-          p.expenses[itemIdx].amount = val;
-        }
       });
 
       var invInputs = cardEl.querySelectorAll(".section:nth-of-type(2) input.amount");
@@ -475,9 +487,6 @@
       invInputs.forEach(function(input, itemIdx){
         var val = parseFloat(input.value) || 0;
         totalInv += val;
-        if(p.investments[itemIdx]){
-          p.investments[itemIdx].amount = val;
-        }
       });
 
       var incomeInput = cardEl.querySelector(".p-head .income input");
