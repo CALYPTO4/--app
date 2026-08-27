@@ -52,8 +52,9 @@
   .btn-action-bottom:hover:not(:disabled) { background:rgba(30,41,59,.15); }
   .btn-action-bottom:disabled { opacity: 0.3; cursor: default; }
 
-  .save-status { font-size:11px; color:#8A8D82; height:16px; margin: 14px 0 6px; }
+  .save-status { font-size:11px; color:#1F7A53; height:16px; margin: 14px 0 6px; font-weight: 500; }
   .save-status.err { color:#B3261E; }
+  .save-status.syncing { color:#A9822D; }
 
   .periods-grid { display:grid; grid-template-columns:1fr; gap:16px; }
   @media (min-width:700px){ .periods-grid{ grid-template-columns:1fr 1fr; } }
@@ -150,7 +151,6 @@
   .cards-list { display:flex; flex-direction:column; gap:16px; margin-bottom:20px; }
 </style>
 
-<!-- Firebase SDK (ใช้แบบระมัดระวัง ไม่ให้บล็อกการแสดงผลหากโหลดไม่ผ่าน) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
@@ -181,7 +181,7 @@
       dbRef = firebase.database().ref("budget_data");
     }
   } catch(e) {
-    console.warn("Firebase Init Error:", e);
+    console.warn("Firebase Init Warning:", e);
   }
 
   function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
@@ -255,7 +255,7 @@
   var state = null;
   var undoStack = [];
   var saveTimer = null;
-  var saveStatus = "";
+  var saveStatus = "บันทึกแล้ว";
   var isRemoteUpdating = false;
 
   function pushUndo(){
@@ -326,40 +326,40 @@
   function renderStatusOnly(){
     var el = document.getElementById("save-status");
     if(!el) return;
-    el.className = "save-status" + (saveStatus==="บันทึกไม่สำเร็จ" || saveStatus.indexOf("ไม่สำเร็จ") !== -1 ? " err" : "");
+    el.className = "save-status" + (saveStatus.indexOf("ไม่สำเร็จ") !== -1 ? " err" : (saveStatus.indexOf("กำลัง") !== -1 ? " syncing" : ""));
     el.textContent = saveStatus;
   }
 
   function save(){
-    saveStatus = "กำลังบันทึก...";
-    renderStatusOnly();
-    
-    // บันทึกลงเครื่องผู้ใช้ก่อนเสมอเพื่อความลื่นไหล
+    // 1. บันทึกลงเครื่องผู้ใช้ทันที (LocalStorage) ป้องกันปิดเบราว์เซอร์แล้วหาย
     try {
-      localStorage.setItem("my_budget_app_data", JSON.stringify(state));
-    } catch(e){}
-
-    if(!dbRef){
-      saveStatus = "บันทึกในเครื่องแล้ว";
+      localStorage.setItem("my_budget_app_data_v2", JSON.stringify(state));
+      saveStatus = "บันทึกแล้ว";
       renderStatusOnly();
-      setTimeout(function(){ if(saveStatus==="บันทึกในเครื่องแล้ว"){ saveStatus=""; renderStatusOnly(); } }, 1500);
-      return;
+    } catch(e) {
+      saveStatus = "บันทึกในเครื่องไม่สำเร็จ";
+      renderStatusOnly();
     }
 
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function(){
-      isRemoteUpdating = true;
-      dbRef.set(state).then(function(){
-        isRemoteUpdating = false;
-        saveStatus = "บันทึกเรียบร้อย";
-        renderStatusOnly();
-        setTimeout(function(){ if(saveStatus==="บันทึกเรียบร้อย"){ saveStatus=""; renderStatusOnly(); } }, 1500);
-      }).catch(function(e){
-        isRemoteUpdating = false;
-        saveStatus = "บันทึกในเครื่อง (Offline)";
-        renderStatusOnly();
-      });
-    }, 400);
+    // 2. ซิงค์ข้อมูลขึ้น Firebase Cloud อัตโนมัติแบบเบื้องหลัง (Auto-Sync)
+    if(dbRef){
+      saveStatus = "กำลังซิงค์ขึ้นคลาวด์...";
+      renderStatusOnly();
+      
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function(){
+        isRemoteUpdating = true;
+        dbRef.set(state).then(function(){
+          isRemoteUpdating = false;
+          saveStatus = "ซิงค์แล้ว";
+          renderStatusOnly();
+        }).catch(function(e){
+          isRemoteUpdating = false;
+          saveStatus = "บันทึกในเครื่องแล้ว (ออฟไลน์)";
+          renderStatusOnly();
+        });
+      }, 400);
+    }
   }
 
   function liveUpdateTotals(){
@@ -711,13 +711,20 @@
   }
 
   function initApp(){
-    // โหลดข้อมูลจาก LocalStorage ก่อนเสมอเพื่อให้แสดงผลได้ทันที 100%
+    // 1. โหลดข้อมูลจาก LocalStorage ทันที เพื่อให้หน้าเว็บแสดงผลได้เร็วที่สุด
     try {
-      var localData = localStorage.getItem("my_budget_app_data");
+      var localData = localStorage.getItem("my_budget_app_data_v2");
       if(localData){
         state = JSON.parse(localData);
       }
     } catch(e){}
+
+    if(!state){
+      try {
+        var oldLocal = localStorage.getItem("my_budget_app_data");
+        if(oldLocal) state = JSON.parse(oldLocal);
+      } catch(e){}
+    }
 
     if(!state){
       state = defaultData();
@@ -735,36 +742,48 @@
 
     render();
 
-    // ถ้าย후 Firebase ทำงานได้ ให้ดึงข้อมูลมาซิงค์แบบ Background
+    // 2. ดึงข้อมูลล่าสุดจาก Firebase Cloud มาเทียบและซิงค์อัตโนมัติ
     if(dbRef){
       dbRef.once("value").then(function(snapshot){
-        var val = snapshot.val();
-        if(val){
-          state = val;
-          if(!state.history){
-            var oldData = JSON.parse(JSON.stringify(state));
-            state = { selectedMonth: "08/2569", history: { "08/2569": oldData } };
-          }
+        var remoteVal = snapshot.val();
+        if(remoteVal && remoteVal.history){
+          // ถือเอาข้อมูลจากคลาวด์เป็นหลัก หรือผสานกันเพื่อให้ทุกเครื่องตรงกัน
+          state = remoteVal;
           if(!state.selectedMonth) state.selectedMonth = "08/2569";
           migrateCardXAuto(getCurrentMonthData());
+          
+          // บันทึกลงเครื่องเพื่อเก็บเป็นเวอร์ชันล่าสุดด้วย
+          try {
+            localStorage.setItem("my_budget_app_data_v2", JSON.stringify(state));
+          } catch(e){}
+          
           render();
+        } else {
+          // ถ้าบนคลาวด์ยังว่าง ให้ส่งข้อมูลจากเครื่องขึ้นไปเก็บบนคลาวด์ครั้งแรก
+          dbRef.set(state);
         }
+      }).catch(function(err){
+        console.warn("Offline mode: using local data.");
+      });
 
-        dbRef.on("value", function(snap){
-          if(isRemoteUpdating) return;
-          var rVal = snap.val();
-          if(rVal){
-            state = rVal;
-            if(!state.history){
-              var oldData = JSON.parse(JSON.stringify(state));
-              state = { selectedMonth: "08/2569", history: { "08/2569": oldData } };
-            }
+      // 3. เปิดระบบ Realtime Listener คอยรับการเปลี่ยนแปลงจากเครื่องอื่นแบบสดๆ
+      dbRef.on("value", function(snapshot){
+        if(isRemoteUpdating) return; // ป้องกันลูปเวลาตัวเองส่งข้อมูลขึ้นไป
+        var remoteVal = snapshot.val();
+        if(remoteVal && remoteVal.history){
+          // เปรียบเทียบคร่าวๆ หรืออัปเดตสเตตถ้ามีการเปลี่ยนแปลงจากที่อื่น
+          var remoteStr = JSON.stringify(remoteVal);
+          var localStr = JSON.stringify(state);
+          if(remoteStr !== localStr){
+            state = remoteVal;
             if(!state.selectedMonth) state.selectedMonth = "08/2569";
+            migrateCardXAuto(getCurrentMonthData());
+            try {
+              localStorage.setItem("my_budget_app_data_v2", JSON.stringify(state));
+            } catch(e){}
             render();
           }
-        });
-      }).catch(function(err){
-        console.warn("Firebase fetch skipped, using local storage.");
+        }
       });
     }
   }
