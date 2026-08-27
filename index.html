@@ -130,7 +130,7 @@
   .cards-list { display:flex; flex-direction:column; gap:16px; margin-bottom:20px; }
 </style>
 
-<!-- Firebase SDK (Compat Version สำหรับใช้งานง่ายในไฟล์เดี่ยว) -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
@@ -521,8 +521,9 @@
 
     save();
 
+    // แก้ไขจุดนี้: ป้องกันไม่ให้ re-render ทั้งหน้าขณะพิมพ์ข้อมูลในส่วนบัตรเครดิต เพื่อไม่ให้เคอร์เซอร์หลุด/พิมพ์ตัวอักษรได้ทีละตัว
     if(bind.indexOf("cards.") !== -1){
-      render();
+      updateLiveTotals();
     } else {
       updateLiveTotals();
     }
@@ -538,7 +539,6 @@
     var netSalaryEl = document.getElementById("net-salary-val");
     if(netSalaryEl) netSalaryEl.textContent = "฿" + thb(netSalary);
 
-    var splitIncome = netSalary / ((state.periods && state.periods.length) || 1);
     var computedCardX = cardXPerPeriod(state);
     var cardEls = document.querySelectorAll(".periods-grid .card");
 
@@ -548,39 +548,50 @@
 
       var incomeInput = cardEl.querySelector(".p-head .income input");
       if(incomeInput && document.activeElement !== incomeInput){
-        p.income = splitIncome;
-        incomeInput.value = splitIncome;
+        p.income = netSalary / state.periods.length;
+        incomeInput.value = p.income;
       }
       var income = incomeInput ? (incomeInput.value === "" ? 0 : (parseFloat(incomeInput.value) || 0)) : p.income;
       p.income = income;
 
-      var expSection = cardEl.querySelectorAll(".section")[0];
-      if(expSection){
-        var expInputs = expSection.querySelectorAll("input.amount");
-        if(p.expenses){
-          p.expenses.forEach(function(item, i){
-            if(item.cardXAuto && expInputs[i]) {
-              expInputs[i].value = computedCardX;
-            }
-          });
-        }
-      }
-
       var t = periodTotals(p, computedCardX);
-      var expEl = document.getElementById("total-exp-" + pIdx);
-      var invEl = document.getElementById("total-inv-" + pIdx);
-      var remainEl = document.getElementById("remain-" + pIdx);
 
-      if(expEl) expEl.textContent = "฿" + thb(t.exp);
-      if(invEl) invEl.textContent = "฿" + thb(t.inv);
-      if(remainEl) {
+      var totalExpEl = document.getElementById("total-exp-" + pIdx);
+      if(totalExpEl) totalExpEl.textContent = "฿" + thb(t.exp);
+
+      var totalInvEl = document.getElementById("total-inv-" + pIdx);
+      if(totalInvEl) totalInvEl.textContent = "฿" + thb(t.inv);
+
+      var remainEl = document.getElementById("remain-" + pIdx);
+      if(remainEl){
         remainEl.textContent = "฿" + thb(t.remaining);
         remainEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
       }
     });
 
-    var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; }, 0);
-    // อัปเดตยอดรวมบัตรเครดิตคงค้างในส่วน cover ถ้ามี
+    // อัปเดตยอดบัตรเครดิตคงค้างรวมด้านบน
+    var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
+    var totalOutEl = document.querySelector(".stat-grid .stat-value.mono[style*='color:#B3261E']");
+    if(totalOutEl) totalOutEl.textContent = "฿" + thb(totalOutstanding);
+
+    // อัปเดตยอดคงเหลือย่อยในแต่ละการ์ดบัตรเครดิต
+    var cardDOMs = document.querySelectorAll(".cards-list > .card");
+    (state.cards || []).forEach(function(c, cIdx){
+      var cEl = cardDOMs[cIdx];
+      if(!cEl) return;
+      var st = cardStatus(c);
+      var cRemainEl = cEl.querySelector(".ct-remain .val");
+      if(cRemainEl) cRemainEl.textContent = "฿" + thb(st.remaining);
+
+      var progLabel = cEl.querySelector(".progress-labels span:first-child");
+      if(progLabel) progLabel.textContent = "จ่ายแล้ว " + st.paidCount + "/" + (c.months ? c.months.length : 0) + " งวด";
+      
+      var progPct = cEl.querySelector(".progress-labels span:last-child");
+      if(progPct) progPct.textContent = st.pct + "%";
+
+      var progFill = cEl.querySelector(".progress-fill");
+      if(progFill) progFill.style.width = st.pct + "%";
+    });
   }
 
   document.addEventListener("click", handleClick);
