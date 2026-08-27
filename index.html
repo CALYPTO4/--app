@@ -136,7 +136,7 @@
 <script>
 (function(){
   "use strict";
-  var STORAGE_KEY = "budget-passbook-standalone-v3";
+  var STORAGE_KEY = "budget-passbook-standalone-v4";
 
   function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
   function thb(n){ n = isFinite(n) ? n : 0; return n.toLocaleString("th-TH",{minimumFractionDigits:0,maximumFractionDigits:2}); }
@@ -175,10 +175,10 @@
   function defaultData(){
     return {
       salary: 31450,
-      ssoPercent: 5,
+      ssoDeduction: 875,
       periods: [
-        {id:uid(), label:"งวดที่ 1", dayLabel:"D5", income:14938.75, open:true, expenses:expenseSet(), investments:investSet()},
-        {id:uid(), label:"งวดที่ 2", dayLabel:"D20", income:14938.75, open:true, expenses:expenseSet(), investments:investSet()}
+        {id:uid(), label:"งวดที่ 1", dayLabel:"D5", income:15287.5, open:true, expenses:expenseSet(), investments:investSet()},
+        {id:uid(), label:"งวดที่ 2", dayLabel:"D20", income:15287.5, open:true, expenses:expenseSet(), investments:investSet()}
       ],
       cards: [
         {id:uid(), name:"CardX", note:"ผ่อนหลัก", totalAmount:38600, monthlyAmount:3860, interest:"16%", open:true,
@@ -198,7 +198,17 @@
   function load(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){ state = JSON.parse(raw); migrateCardXAuto(state); return; }
+      if(raw){ 
+        state = JSON.parse(raw); 
+        // แปลงข้อมูลเก่าถ้าเคยบันทึกเป็น ssoPercent ให้ตีเป็นยอดเงินคงที่ หรือตั้งค่าเริ่มต้น
+        if(state.ssoPercent !== undefined && state.ssoDeduction === undefined){
+          state.ssoDeduction = 875;
+          delete state.ssoPercent;
+        }
+        if(state.ssoDeduction === undefined) state.ssoDeduction = 875;
+        migrateCardXAuto(state); 
+        return; 
+      }
     }catch(e){}
     state = defaultData();
   }
@@ -364,7 +374,7 @@
   }
 
   function render(){
-    var netSalary = state.salary * (1 - state.ssoPercent/100);
+    var netSalary = state.salary - (Number(state.ssoDeduction) || 0);
     var totalOutstanding = state.cards.reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
 
     var computedCardX = cardXPerPeriod(state);
@@ -377,7 +387,7 @@
       '</div>' +
       '<div class="stat-grid">' +
         '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" id="salary-input" data-bind="salary" value="' + state.salary + '" /></div></div>' +
-        '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value"><input type="number" id="sso-input" data-bind="ssoPercent" value="' + state.ssoPercent + '" style="width:40px" />%</div></div>' +
+        '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value">฿<input type="number" id="sso-input" data-bind="ssoDeduction" value="' + state.ssoDeduction + '" style="width:70px" /></div></div>' +
         '<div><div class="stat-label">เงินเดือนสุทธิ</div><div class="stat-value mono" id="net-salary-val">฿' + thb(netSalary) + '</div></div>' +
         '<div><div class="stat-label">บัตรเครดิตคงค้างรวม</div><div class="stat-value mono" style="color:#B3261E">฿' + thb(totalOutstanding) + '</div></div>' +
       '</div>' +
@@ -452,10 +462,10 @@
     if(!bind) return;
     var value = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
 
-    if(bind === "salary" || bind === "ssoPercent"){
+    if(bind === "salary" || bind === "ssoDeduction"){
       state[bind] = value;
       save();
-      updateLiveTotals(); // คำนวณสดทันทีโดยไม่เรนเดอร์หน้าใหม่ โฟกัสไม่หลุด
+      updateLiveTotals();
       return;
     } else if(bind.indexOf(".expenses.") !== -1 || bind.indexOf(".investments.") !== -1){
       var pidx = el.getAttribute("data-path");
@@ -480,13 +490,12 @@
   }
 
   function updateLiveTotals(){
-    // อ่านค่าเงินเดือนและประกันสังคมล่าสุดจากช่อง input โดยตรง (ป้องกันกรณีพิมพ์ค้างไว้แล้วรีเรนเดอร์)
     var salaryEl = document.getElementById("salary-input");
     var ssoEl = document.getElementById("sso-input");
     if(salaryEl) state.salary = parseFloat(salaryEl.value) || 0;
-    if(ssoEl) state.ssoPercent = parseFloat(ssoEl.value) || 0;
+    if(ssoEl) state.ssoDeduction = parseFloat(ssoEl.value) || 0;
 
-    var netSalary = state.salary * (1 - state.ssoPercent/100);
+    var netSalary = state.salary - (Number(state.ssoDeduction) || 0);
     var netSalaryEl = document.getElementById("net-salary-val");
     if(netSalaryEl) netSalaryEl.textContent = "฿" + thb(netSalary);
 
@@ -499,7 +508,6 @@
       var cardEl = cardEls[pIdx];
       if(!cardEl) return;
 
-      // อัปเดตช่องเงินเข้างวดนี้ให้อัตโนมัติ (ถ้าไม่ได้พิมพ์แก้ทับเอง)
       var incomeInput = cardEl.querySelector(".p-head .income input");
       if(incomeInput && document.activeElement !== incomeInput){
         p.income = splitIncome;
