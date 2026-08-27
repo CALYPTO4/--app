@@ -131,14 +131,18 @@
   .ct-remain span:first-child { color:#5A5D51; }
   .ct-remain .val { font-size:16px; font-weight:600; color:#2A2E24; }
 
-  /* ตารางสรุปภาพรวมรายรายการ */
+  /* ตารางสรุปภาพรวม */
   .summary-table-card { background:#fff; border:1px solid #DEE0D5; border-radius:2px; margin-top: 24px; margin-bottom: 24px; box-shadow:0 1px 0 0 #DEE0D5; }
   .summary-table-head { padding: 12px 16px; background: #E8E4D6; border-bottom: 2px solid rgba(169,130,45,.5); font-family: 'Noto Serif Thai', serif; font-size: 15px; color: #1E293B; font-weight: 600; }
+  .summary-table-head.green-theme { background: #E3E7DA; border-bottom: 2px solid rgba(31,122,83,.4); }
+  .summary-table-head.grand-theme { background: #1E293B; color: #F5F6F2; border-bottom: 2px solid rgba(169,130,45,.8); }
   .summary-table-body { padding: 0 16px; }
-  .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #EEEFE9; font-size: 13px; }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #EEEFE9; font-size: 13px; }
   .summary-row:last-child { border-bottom: none; }
   .summary-row .s-name { color: #2A2E24; }
   .summary-row .s-val { font-weight: 600; color: #B3261E; font-family: 'IBM Plex Mono', monospace; }
+  .summary-row .s-val.green { color: #1F7A53; }
+  .summary-row .s-val.dark { color: #1E293B; font-size: 15px; }
 
   .icon { display:inline-block; vertical-align:-2px; }
   .cards-list { display:flex; flex-direction:column; gap:16px; margin-bottom:20px; }
@@ -378,36 +382,78 @@
       }
     });
 
-    // อัปเดตตารางสรุปภาพรวมรายรายการแบบ Realtime
-    updateCombinedSummaryUI(computedCardX);
+    updateCombinedSummaryUI(computedCardX, netSalary);
   }
 
-  function updateCombinedSummaryUI(computedCardX){
-    var container = document.getElementById("combined-summary-body");
-    if(!container || !state || !state.periods) return;
+  function updateCombinedSummaryUI(computedCardX, netSalary){
+    // 1. อัปเดตตารางสรุปค่าใช้จ่าย
+    var expContainer = document.getElementById("combined-summary-body");
+    var expMap = {};
+    var totalExpAll = 0;
     
-    // รวมยอดค่าใช้จ่ายแต่ละรายการจากทุกงวด
-    var map = {};
-    state.periods.forEach(function(p){
+    (state.periods || []).forEach(function(p){
       if(!p.expenses) return;
       p.expenses.forEach(function(item){
         var key = (item.name || "ไม่มีชื่อ").trim();
         if(!key) key = "ไม่มีชื่อ";
         var amt = effectiveAmount(item, computedCardX);
-        map[key] = (map[key] || 0) + amt;
+        expMap[key] = (expMap[key] || 0) + amt;
+        totalExpAll += amt;
       });
     });
 
-    var html = "";
-    var keys = Object.keys(map);
-    if(keys.length === 0){
-      html = '<div style="padding:10px 0; color:#8A8D82; font-size:12px; text-align:center;">ยังไม่มีรายการค่าใช้จ่าย</div>';
-    } else {
-      keys.forEach(function(k){
-        html += '<div class="summary-row"><span class="s-name">' + esc(k) + '</span><span class="s-val">฿' + thb(map[k]) + '</span></div>';
-      });
+    if(expContainer){
+      var html = "";
+      var keys = Object.keys(expMap);
+      if(keys.length === 0){
+        html = '<div style="padding:10px 0; color:#8A8D82; font-size:12px; text-align:center;">ยังไม่มีรายการค่าใช้จ่าย</div>';
+      } else {
+        keys.forEach(function(k){
+          html += '<div class="summary-row"><span class="s-name">' + esc(k) + '</span><span class="s-val">฿' + thb(expMap[k]) + '</span></div>';
+        });
+      }
+      expContainer.innerHTML = html;
     }
-    container.innerHTML = html;
+
+    // 2. อัปเดตตารางสรุปเงินลงทุน
+    var invContainer = document.getElementById("combined-invest-body");
+    var invMap = {};
+    var totalInvAll = 0;
+
+    (state.periods || []).forEach(function(p){
+      if(!p.investments) return;
+      p.investments.forEach(function(item){
+        var key = (item.name || "ไม่มีชื่อ").trim();
+        if(!key) key = "ไม่มีชื่อ";
+        var amt = Number(item.amount) || 0;
+        invMap[key] = (invMap[key] || 0) + amt;
+        totalInvAll += amt;
+      });
+    });
+
+    if(invContainer){
+      var invHtml = "";
+      var invKeys = Object.keys(invMap);
+      if(invKeys.length === 0){
+        invHtml = '<div style="padding:10px 0; color:#8A8D82; font-size:12px; text-align:center;">ยังไม่มีรายการเงินลงทุน</div>';
+      } else {
+        invKeys.forEach(function(k){
+          invHtml += '<div class="summary-row"><span class="s-name">' + esc(k) + '</span><span class="s-val green">฿' + thb(invMap[k]) + '</span></div>';
+        });
+      }
+      invContainer.innerHTML = invHtml;
+    }
+
+    // 3. อัปเดตตารางสรุปยอดรวมเบ็ดเสร็จทั้งหมด
+    var grandContainer = document.getElementById("grand-summary-body");
+    if(grandContainer){
+      var grandRemaining = netSalary - totalExpAll - totalInvAll;
+      grandContainer.innerHTML = '' +
+        '<div class="summary-row"><span class="s-name">รายรับสุทธิทั้งหมด (หลังหักประกันสังคม)</span><span class="s-val dark">฿' + thb(netSalary) + '</span></div>' +
+        '<div class="summary-row"><span class="s-name">รวมค่าใช้จ่ายทั้งหมดทุกงวด</span><span class="s-val">฿' + thb(totalExpAll) + '</span></div>' +
+        '<div class="summary-row"><span class="s-name">รวมเงินลงทุนทั้งหมดทุกงวด</span><span class="s-val green">฿' + thb(totalInvAll) + '</span></div>' +
+        '<div class="summary-row"><span class="s-name"><b>ยอดเงินคงเหลือสุทธิ (รวมทุกงวด)</b></span><span class="s-val dark" style="color:' + (grandRemaining < 0 ? '#B3261E' : '#1F7A53') + '">฿' + thb(grandRemaining) + '</span></div>';
+    }
   }
 
   function renderLineRow(item, idx, path, accentClass, opts){
@@ -511,27 +557,59 @@
     var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
     var computedCardX = cardXPerPeriod(state);
 
-    // คำนวณข้อมูลรวมรายรายการสำหรับใส่ใน HTML ตอนเรนเดอร์ครั้งแรก
-    var combinedMap = {};
+    // ประมวลผลข้อมูลสรุปสำหรับเรนเดอร์ครั้งแรก
+    var expMap = {};
+    var totalExpAll = 0;
     (state.periods || []).forEach(function(p){
       if(!p.expenses) return;
       p.expenses.forEach(function(item){
         var key = (item.name || "ไม่มีชื่อ").trim();
         if(!key) key = "ไม่มีชื่อ";
         var amt = effectiveAmount(item, computedCardX);
-        combinedMap[key] = (combinedMap[key] || 0) + amt;
+        expMap[key] = (expMap[key] || 0) + amt;
+        totalExpAll += amt;
       });
     });
 
     var combinedHtml = "";
-    var keys = Object.keys(combinedMap);
+    var keys = Object.keys(expMap);
     if(keys.length === 0){
       combinedHtml = '<div style="padding:10px 0; color:#8A8D82; font-size:12px; text-align:center;">ยังไม่มีรายการค่าใช้จ่าย</div>';
     } else {
       keys.forEach(function(k){
-        combinedHtml += '<div class="summary-row"><span class="s-name">' + esc(k) + '</span><span class="s-val">฿' + thb(combinedMap[k]) + '</span></div>';
+        combinedHtml += '<div class="summary-row"><span class="s-name">' + esc(k) + '</span><span class="s-val">฿' + thb(expMap[k]) + '</span></div>';
       });
     }
+
+    var invMap = {};
+    var totalInvAll = 0;
+    (state.periods || []).forEach(function(p){
+      if(!p.investments) return;
+      p.investments.forEach(function(item){
+        var key = (item.name || "ไม่มีชื่อ").trim();
+        if(!key) key = "ไม่มีชื่อ";
+        var amt = Number(item.amount) || 0;
+        invMap[key] = (invMap[key] || 0) + amt;
+        totalInvAll += amt;
+      });
+    });
+
+    var invHtml = "";
+    var invKeys = Object.keys(invMap);
+    if(invKeys.length === 0){
+      invHtml = '<div style="padding:10px 0; color:#8A8D82; font-size:12px; text-align:center;">ยังไม่มีรายการเงินลงทุน</div>';
+    } else {
+      invKeys.forEach(function(k){
+        invHtml += '<div class="summary-row"><span class="s-name">' + esc(k) + '</span><span class="s-val green">฿' + thb(invMap[k]) + '</span></div>';
+      });
+    }
+
+    var grandRemaining = netSalary - totalExpAll - totalInvAll;
+    var grandHtml = '' +
+      '<div class="summary-row"><span class="s-name">รายรับสุทธิทั้งหมด (หลังหักประกันสังคม)</span><span class="s-val dark">฿' + thb(netSalary) + '</span></div>' +
+      '<div class="summary-row"><span class="s-name">รวมค่าใช้จ่ายทั้งหมดทุกงวด</span><span class="s-val">฿' + thb(totalExpAll) + '</span></div>' +
+      '<div class="summary-row"><span class="s-name">รวมเงินลงทุนทั้งหมดทุกงวด</span><span class="s-val green">฿' + thb(totalInvAll) + '</span></div>' +
+      '<div class="summary-row"><span class="s-name"><b>ยอดเงินคงเหลือสุทธิ (รวมทุกงวด)</b></span><span class="s-val dark" style="color:' + (grandRemaining < 0 ? '#B3261E' : '#1F7A53') + '">฿' + thb(grandRemaining) + '</span></div>';
 
     var html = '' +
     '<div class="cover"><div class="cover-inner">' +
@@ -551,10 +629,22 @@
       '<div id="save-status" class="save-status"></div>' +
       '<div class="periods-grid">' + (state.periods || []).map(function(p,i){ return renderPeriod(p, i, computedCardX); }).join("") + '</div>' +
       
-      /* บล็อกหัวข้อใหม่: สรุปผลรวมค่าใช้จ่ายทั้ง 2 งวดแยกตามรายการ */
+      /* สรุปภาพรวมค่าใช้จ่าย */
       '<div class="summary-table-card">' +
         '<div class="summary-table-head">สรุปผลรวมค่าใช้จ่ายทั้ง 2 งวด (แยกตามรายการ)</div>' +
         '<div class="summary-table-body" id="combined-summary-body">' + combinedHtml + '</div>' +
+      '</div>' +
+
+      /* สรุปภาพรวมเงินลงทุน */
+      '<div class="summary-table-card">' +
+        '<div class="summary-table-head green-theme">สรุปผลรวมเงินลงทุนทั้ง 2 งวด (แยกตามรายการ)</div>' +
+        '<div class="summary-table-body" id="combined-invest-body">' + invHtml + '</div>' +
+      '</div>' +
+
+      /* สรุปยอดรวมทั้งหมดเบ็ดเสร็จ */
+      '<div class="summary-table-card">' +
+        '<div class="summary-table-head grand-theme">สรุปยอดรวมเบ็ดเสร็จทั้งหมด (ภาพรวมเดือนนี้)</div>' +
+        '<div class="summary-table-body" id="grand-summary-body">' + grandHtml + '</div>' +
       '</div>' +
 
       '<div class="cards-header"><h2 class="sub serif">ผ่อนบัตรเครดิต</h2>' +
