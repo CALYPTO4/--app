@@ -361,7 +361,7 @@
   function renderPeriod(p, pIdx, computedCardX){
     var netSalary = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
     var splitIncome = state.periods.length > 0 ? netSalary / state.periods.length : p.income;
-    p.income = splitIncome; // บังคับอัปเดตค่าเงินเข้างวดให้เท่ากับยอดสุทธิหารจำนวนงวดสดๆ เสมอ
+    p.income = splitIncome;
 
     var t = periodTotals(p, computedCardX);
     var expPath = "periods." + pIdx + ".expenses";
@@ -374,7 +374,7 @@
         '<div class="left"><span class="serif" style="font-size:15px">' + esc(p.label) + '</span>' +
         '<input class="daylabel" data-bind="periods.' + pIdx + '.dayLabel" value="' + esc(p.dayLabel) + '" /></div>' +
         '<div class="income"><span>เงินเข้างวดนี้</span><span>฿</span>' +
-          '<input type="number" class="period-income-input" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
+          '<input type="number" class="period-income-input" id="period-income-' + pIdx + '" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
       '</div>' +
       '<div class="section">' +
         '<div class="section-title">' + ICONS.wallet + ' ค่าใช้จ่าย</div>' +
@@ -504,17 +504,23 @@
     if(bind === "salary" || bind === "ssoDeduction"){
       state[bind] = value;
       var net = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
+      
+      // อัปเดตเฉพาะข้อความเงินเดือนสุทธิโดยไม่เรนเดอร์หน้าใหม่ เคอเซอร์จึงไม่หลุด
       var netEl = document.getElementById("net-salary-val");
       if(netEl) netEl.textContent = "฿" + thb(net);
 
-      // บังคับหารเงินเดือนสุทธิตามจำนวนงวดทันที
+      // อัปเดตช่องเงินเข้างวดและยอดรวมในโดมโดยตรง
       if(state.periods && state.periods.length > 0){
         var splitIncome = net / state.periods.length;
         state.periods.forEach(function(p, pIdx){
           p.income = splitIncome;
+          var periodInput = document.getElementById("period-income-" + pIdx);
+          if(periodInput && document.activeElement !== periodInput){
+            periodInput.value = splitIncome;
+          }
         });
       }
-      render(); // บังคับรีเฟรชหน้าจอทั้งหมดเพื่อให้ตัวเลขในกล่องงวดเปลี่ยนตามทันที
+      liveUpdateTotals();
       save();
       return;
     } else {
