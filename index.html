@@ -424,7 +424,6 @@
     renderStatusOnly();
   }
 
-  // ฟังก์ชันช่วยเซ็ตค่าลงใน Object ตาม Path เช่น "periods.0.expenses.1.name"
   function setDeepValue(obj, path, val){
     var parts = path.split(".");
     var curr = obj;
@@ -436,7 +435,7 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  // แก้ไขปัญหาหลัก: ใช้การดึงข้อมูลสดจาก DOM มารวมเข้า State ทันทีตอนพิมพ์ โดย "ไม่สั่ง render()" ซ้ำ
+  // ปรับปรุง Event Listener สำหรับช่อง input ทั้งหมด ให้บันทึกค่าลง State และ Cloud ทันทีแบบ Realtime โดย *ไม่สั่ง render()* ซ้ำ
   document.addEventListener("input", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
@@ -445,18 +444,20 @@
     var rawVal = el.value;
     var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
 
-    // อัปเดตค่าลง state โดยตรง
     if(bind === "salary" || bind === "ssoDeduction"){
       state[bind] = value;
+      // อัปเดตช่องเงินเดือนสุทธิแบบสดๆ ทันทีโดยไม่ต้องเรนเดอร์ทั้งหน้า
+      var net = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
+      var netEl = document.getElementById("net-salary-val");
+      if(netEl) netEl.textContent = "฿" + thb(net);
     } else {
       setDeepValue(state, bind, value);
     }
 
-    // ทำการเซฟข้อมูลขึ้น Firebase เงียบๆ โดยไม่เรียก render() หน้าจอใหม่ขณะพิมพ์
     save();
   });
 
-  // จัดการอีเวนต์ Click สำหรับปุ่มสั่งการต่างๆ (ซึ่งจำเป็นต้อง Render หน้าจอใหม่เฉพาะตอนกดปุ่ม)
+  // จัดการอีเวนต์ Click สำหรับปุ่มสั่งการต่างๆ (เช่น เพิ่ม/ลบรายการ หรือปุ่มจัดการบัตร ซึ่งต้องใช้ render หน้าจอใหม่)
   document.addEventListener("click", function(e){
     var btn = e.target.closest("[data-action]");
     if(!btn) return;
