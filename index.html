@@ -386,7 +386,7 @@
   }
 
   function updateCombinedSummaryUI(computedCardX, netSalary){
-    // 1. อัปเดตตารางสรุปค่าใช้จ่าย
+    // 1. ตารางสรุปค่าใช้จ่าย
     var expContainer = document.getElementById("combined-summary-body");
     var expMap = {};
     var totalExpAll = 0;
@@ -415,7 +415,7 @@
       expContainer.innerHTML = html;
     }
 
-    // 2. อัปเดตตารางสรุปเงินลงทุน
+    // 2. ตารางสรุปเงินลงทุน (แยกจากค่าใช้จ่ายอย่างถูกต้อง)
     var invContainer = document.getElementById("combined-invest-body");
     var invMap = {};
     var totalInvAll = 0;
@@ -444,7 +444,7 @@
       invContainer.innerHTML = invHtml;
     }
 
-    // 3. อัปเดตตารางสรุปยอดรวมเบ็ดเสร็จทั้งหมด
+    // 3. ตารางสรุปยอดรวมเบ็ดเสร็จทั้งหมด
     var grandContainer = document.getElementById("grand-summary-body");
     if(grandContainer){
       var grandRemaining = netSalary - totalExpAll - totalInvAll;
@@ -557,7 +557,7 @@
     var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
     var computedCardX = cardXPerPeriod(state);
 
-    // ประมวลผลข้อมูลสรุปสำหรับเรนเดอร์ครั้งแรก
+    // ประมวลผลข้อมูลสรุปครั้งแรก
     var expMap = {};
     var totalExpAll = 0;
     (state.periods || []).forEach(function(p){
@@ -629,19 +629,19 @@
       '<div id="save-status" class="save-status"></div>' +
       '<div class="periods-grid">' + (state.periods || []).map(function(p,i){ return renderPeriod(p, i, computedCardX); }).join("") + '</div>' +
       
-      /* สรุปภาพรวมค่าใช้จ่าย */
+      /* ตารางสรุปค่าใช้จ่าย */
       '<div class="summary-table-card">' +
         '<div class="summary-table-head">สรุปผลรวมค่าใช้จ่ายทั้ง 2 งวด (แยกตามรายการ)</div>' +
         '<div class="summary-table-body" id="combined-summary-body">' + combinedHtml + '</div>' +
       '</div>' +
 
-      /* สรุปภาพรวมเงินลงทุน */
+      /* ตารางสรุปเงินลงทุน */
       '<div class="summary-table-card">' +
         '<div class="summary-table-head green-theme">สรุปผลรวมเงินลงทุนทั้ง 2 งวด (แยกตามรายการ)</div>' +
         '<div class="summary-table-body" id="combined-invest-body">' + invHtml + '</div>' +
       '</div>' +
 
-      /* สรุปยอดรวมทั้งหมดเบ็ดเสร็จ */
+      /* ตารางสรุปยอดรวมเบ็ดเสร็จทั้งหมด */
       '<div class="summary-table-card">' +
         '<div class="summary-table-head grand-theme">สรุปยอดรวมเบ็ดเสร็จทั้งหมด (ภาพรวมเดือนนี้)</div>' +
         '<div class="summary-table-body" id="grand-summary-body">' + grandHtml + '</div>' +
