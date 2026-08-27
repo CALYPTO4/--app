@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="งบประมาณ" />
 <meta name="theme-color" content="#F5F6F2" />
-<!-- ป้องกันการจำแคชเมื่อเปิดจากหน้าโฮมสกรีน -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
@@ -129,7 +128,6 @@
 
   .icon { display:inline-block; vertical-align:-2px; }
   .cards-list { display:flex; flex-direction:column; gap:16px; margin-bottom:20px; }
-  .install-tip { max-width:880px; margin:0 auto; padding:10px 16px 0; font-size:11.5px; color:#8A8D82; }
 </style>
 </head>
 <body>
@@ -138,7 +136,7 @@
 <script>
 (function(){
   "use strict";
-  var STORAGE_KEY = "budget-passbook-standalone-v1";
+  var STORAGE_KEY = "budget-passbook-standalone-v2";
 
   function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
   function thb(n){ n = isFinite(n) ? n : 0; return n.toLocaleString("th-TH",{minimumFractionDigits:0,maximumFractionDigits:2}); }
@@ -300,7 +298,7 @@
         '<div class="left"><span class="serif" style="font-size:15px">' + esc(p.label) + '</span>' +
         '<input class="daylabel" data-bind="periods.' + pIdx + '.dayLabel" value="' + esc(p.dayLabel) + '" /></div>' +
         '<div class="income"><span>เงินเข้างวดนี้</span><span>฿</span>' +
-          '<input type="number" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
+          '<input type="number" class="period-income-input" data-pidx="' + pIdx + '" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
       '</div>' +
       '<div class="section">' +
         '<div class="section-title">' + ICONS.wallet + ' ค่าใช้จ่าย</div>' +
@@ -378,9 +376,9 @@
         '<button class="reset-btn" data-action="reset">' + ICONS.reset + ' รีเซ็ต</button>' +
       '</div>' +
       '<div class="stat-grid">' +
-        '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" data-bind="salary" value="' + state.salary + '" /></div></div>' +
-        '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value"><input type="number" data-bind="ssoPercent" value="' + state.ssoPercent + '" style="width:40px" />%</div></div>' +
-        '<div><div class="stat-label">เงินเดือนสุทธิ</div><div class="stat-value mono">฿' + thb(netSalary) + '</div></div>' +
+        '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" id="salary-input" data-bind="salary" value="' + state.salary + '" /></div></div>' +
+        '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value"><input type="number" id="sso-input" data-bind="ssoPercent" value="' + state.ssoPercent + '" style="width:40px" />%</div></div>' +
+        '<div><div class="stat-label">เงินเดือนสุทธิ</div><div class="stat-value mono" id="net-salary-val">฿' + thb(netSalary) + '</div></div>' +
         '<div><div class="stat-label">บัตรเครดิตคงค้างรวม</div><div class="stat-value mono" style="color:#B3261E">฿' + thb(totalOutstanding) + '</div></div>' +
       '</div>' +
     '</div></div>' +
@@ -454,7 +452,20 @@
     if(!bind) return;
     var value = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
 
-    if(bind.indexOf(".expenses.") !== -1 || bind.indexOf(".investments.") !== -1){
+    if(bind === "salary" || bind === "ssoPercent"){
+      state[bind] = value;
+      var netSalary = state.salary * (1 - state.ssoPercent/100);
+      var netSalaryEl = document.getElementById("net-salary-val");
+      if(netSalaryEl) netSalaryEl.textContent = "฿" + thb(netSalary);
+
+      // อัปเดตเงินเข้างวดให้อัตโนมัติ (หาร 2 งวด หรือตามจำนวนงวด)
+      var splitIncome = netSalary / (state.periods.length || 1);
+      state.periods.forEach(function(p, idx){
+        p.income = splitIncome;
+        var periodIncomeInput = document.querySelector('.period-income-input[data-pidx="' + idx + '"]');
+        if(periodIncomeInput) periodIncomeInput.value = splitIncome;
+      });
+    } else if(bind.indexOf(".expenses.") !== -1 || bind.indexOf(".investments.") !== -1){
       var pidx = el.getAttribute("data-path");
       var idx = el.getAttribute("data-idx");
       if(pidx && idx !== null){
@@ -469,7 +480,7 @@
 
     save();
     
-    if(bind.indexOf("cards.") !== -1 || bind.indexOf("salary") !== -1 || bind.indexOf("ssoPercent") !== -1){
+    if(bind.indexOf("cards.") !== -1 || bind === "salary" || bind === "ssoPercent"){
       render();
     } else {
       updateLiveTotals();
@@ -484,7 +495,6 @@
       var cardEl = cardEls[pIdx];
       if(!cardEl) return;
 
-      // อัปเดตเฉพาะช่องค่าใช้จ่าย (Expenses) โดยดึงจาก DOM ของฝั่งค่าใช้จ่ายเท่านั้น
       var expSection = cardEl.querySelectorAll(".section")[0];
       if(expSection){
         var expInputs = expSection.querySelectorAll("input.amount");
@@ -498,7 +508,6 @@
         if(expTotalRow) expTotalRow.textContent = "฿" + thb(totalExp);
       }
 
-      // อัปเดตเฉพาะช่องเงินลงทุน (Investments) โดยดึงจาก DOM ของฝั่งลงทุนเท่านั้น
       var invSection = cardEl.querySelectorAll(".section")[1];
       var totalInv = 0;
       if(invSection){
@@ -527,12 +536,9 @@
       }
     });
 
-    var netSalary = state.salary * (1 - state.ssoPercent/100);
     var totalOutstanding = state.cards.reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
-    
     var statValues = document.querySelectorAll(".stat-value.mono");
     if(statValues.length >= 2){
-      statValues[0].textContent = "฿" + thb(netSalary);
       statValues[1].textContent = "฿" + thb(totalOutstanding);
     }
   }
