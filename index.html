@@ -298,6 +298,32 @@
     });
   }
 
+  // ฟังก์ชันคำนวณและอัปเดตตัวเลขรวมเฉพาะจุด (เรียลไทม์โดยไม่ต้องเรนเดอร์ทั้งหน้า)
+  function liveUpdateTotals(){
+    if(!state) return;
+    var computedCardX = cardXPerPeriod(state);
+
+    // อัปเดตข้อมูลในแต่ละงวด
+    (state.periods || []).forEach(function(p, pIdx){
+      var t = periodTotals(p, computedCardX);
+
+      // อัปเดตรวมค่าใช้จ่าย
+      var expEl = document.getElementById("total-exp-" + pIdx);
+      if(expEl) expEl.textContent = "฿" + thb(t.exp);
+
+      // อัปเดตรวมเงินลงทุน
+      var invEl = document.getElementById("total-inv-" + pIdx);
+      if(invEl) invEl.textContent = "฿" + thb(t.inv);
+
+      // อัปเดตคงเหลือหลังหักทุกอย่าง
+      var remEl = document.getElementById("remain-" + pIdx);
+      if(remEl){
+        remEl.textContent = "฿" + thb(t.remaining);
+        remEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
+      }
+    });
+  }
+
   function renderLineRow(item, idx, path, accentClass, opts){
     opts = opts || {};
     var isAuto = !!item.cardXAuto;
@@ -435,7 +461,7 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  // ปรับปรุง Event Listener สำหรับช่อง input ทั้งหมด ให้บันทึกค่าลง State และ Cloud ทันทีแบบ Realtime โดย *ไม่สั่ง render()* ซ้ำ
+  // อัปเดตค่าลง State พร้อมคำนวณผลรวมใหม่ทันทีแบบ Realtime โดยที่เคอร์เซอร์ไม่หลุด
   document.addEventListener("input", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
@@ -446,18 +472,18 @@
 
     if(bind === "salary" || bind === "ssoDeduction"){
       state[bind] = value;
-      // อัปเดตช่องเงินเดือนสุทธิแบบสดๆ ทันทีโดยไม่ต้องเรนเดอร์ทั้งหน้า
-      var net = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
+      var net = (Number(state.salary)||0) - (Number(state.ssoDzn) || Number(state.ssoDeduction)||0);
       var netEl = document.getElementById("net-salary-val");
       if(netEl) netEl.textContent = "฿" + thb(net);
     } else {
       setDeepValue(state, bind, value);
     }
 
+    // เรียกฟังก์ชันคำนวณยอดรวมและช่องคงเหลือใหม่ทันทีขณะพิมพ์
+    liveUpdateTotals();
     save();
   });
 
-  // จัดการอีเวนต์ Click สำหรับปุ่มสั่งการต่างๆ (เช่น เพิ่ม/ลบรายการ หรือปุ่มจัดการบัตร ซึ่งต้องใช้ render หน้าจอใหม่)
   document.addEventListener("click", function(e){
     var btn = e.target.closest("[data-action]");
     if(!btn) return;
@@ -487,6 +513,7 @@
     } else if(action === "add-item"){
       var path2 = btn.getAttribute("data-path");
       (function(obj, path){
+        var parts = path.path ? path.path : path.split("."); // Safe fallback
         var parts = path.split(".");
         var cur = obj;
         for(var i=0;i<parts.length;i++){ if(cur) cur = cur[parts[i]]; }
