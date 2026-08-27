@@ -484,36 +484,42 @@
       var cardEl = cardEls[pIdx];
       if(!cardEl) return;
 
-      // คำนวณค่าใช้จ่ายจาก input จริงในหน้าจอของงวดนั้นๆ
-      var expInputs = cardEl.querySelectorAll(".section:nth-of-type(1) input.amount");
-      var totalExp = 0;
-      expInputs.forEach(function(input, idx){
-        var val = parseFloat(input.value) || 0;
-        totalExp += val;
-        // อัปเดตข้อมูลใน state ให้ตรงกันทันที
-        if(p.expenses[idx]) p.expenses[idx].amount = val;
-      });
+      // อัปเดตเฉพาะช่องค่าใช้จ่าย (Expenses) โดยดึงจาก DOM ของฝั่งค่าใช้จ่ายเท่านั้น
+      var expSection = cardEl.querySelectorAll(".section")[0];
+      if(expSection){
+        var expInputs = expSection.querySelectorAll("input.amount");
+        var totalExp = 0;
+        expInputs.forEach(function(input, idx){
+          var val = parseFloat(input.value) || 0;
+          totalExp += val;
+          if(p.expenses[idx]) p.expenses[idx].amount = val;
+        });
+        var expTotalRow = expSection.querySelector(".total-row b");
+        if(expTotalRow) expTotalRow.textContent = "฿" + thb(totalExp);
+      }
 
-      // คำนวณเงินลงทุนจาก input จริงในหน้าจอของงวดนั้นๆ
-      var invInputs = cardEl.querySelectorAll(".section:nth-of-type(2) input.amount");
+      // อัปเดตเฉพาะช่องเงินลงทุน (Investments) โดยดึงจาก DOM ของฝั่งลงทุนเท่านั้น
+      var invSection = cardEl.querySelectorAll(".section")[1];
       var totalInv = 0;
-      invInputs.forEach(function(input, idx){
-        var val = parseFloat(input.value) || 0;
-        totalInv += val;
-        if(p.investments[idx]) p.investments[idx].amount = val;
-      });
+      if(invSection){
+        var invInputs = invSection.querySelectorAll("input.amount");
+        invInputs.forEach(function(input, idx){
+          var val = parseFloat(input.value) || 0;
+          totalInv += val;
+          if(p.investments[idx]) p.investments[idx].amount = val;
+        });
+        var invTotalRow = invSection.querySelector(".total-row b");
+        if(invTotalRow) invTotalRow.textContent = "฿" + thb(totalInv);
+      }
 
       var incomeInput = cardEl.querySelector(".p-head .income input");
       var income = incomeInput ? (parseFloat(incomeInput.value) || 0) : p.income;
       p.income = income;
 
-      var remaining = income - totalExp - totalInv;
+      var currentExp = p.expenses.reduce(function(s,i){return s+effectiveAmount(i, computedCardX);},0);
+      var currentInv = p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0);
+      var remaining = income - currentExp - currentInv;
 
-      var totalRows = cardEl.querySelectorAll(".total-row b");
-      if(totalRows.length >= 2){
-        totalRows[0].textContent = "฿" + thb(totalExp);
-        totalRows[1].textContent = "฿" + thb(totalInv);
-      }
       var remainVal = cardEl.querySelector(".remain .val");
       if(remainVal){
         remainVal.textContent = "฿" + thb(remaining);
