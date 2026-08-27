@@ -45,7 +45,7 @@
   @media (min-width:560px){ .stat-grid{ grid-template-columns: repeat(4,1fr);} }
   .stat-label { font-size:10px; opacity:.55; margin-bottom:3px; }
   .stat-value { font-size:18px; font-weight:500; }
-  .stat-value input, .stat-value select { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.3); outline:none; font-size:18px; font-weight:500; color:#1E293B; width:100%; }
+  .stat-value input, .stat-value select { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.3); outline:none; font-size:16px; font-weight:500; color:#1E293B; width:100%; }
 
   .cover-actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(30,41,59,.12); flex-wrap: wrap; }
   .btn-action-bottom { display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; background:rgba(30,41,59,.08); border:1px solid rgba(30,41,59,.15); border-radius:3px; color:#1E293B; padding:5px 12px; }
@@ -75,6 +75,7 @@
   .line-row input.amount { width:88px; background:transparent; border:none; outline:none; text-align:right; font-size:13.5px; font-weight:500; }
   .line-row input.amount.red { color:#B3261E; }
   .line-row input.amount.green { color:#1F7A53; }
+  .line-row input.amount.blue { color:#1D4ED8; }
   .line-row .rm { background:none; border:none; color:#B4B7A9; padding:2px; flex-shrink:0; }
   .line-row .rm:hover { color:#B3261E; }
   .add-line { display:flex; align-items:center; gap:4px; background:none; border:none; font-size:11px; color:#8A8D82; margin:2px 0 8px; padding:0; }
@@ -135,6 +136,7 @@
   .summary-table-card { background:#fff; border:1px solid #DEE0D5; border-radius:2px; margin-top: 24px; margin-bottom: 24px; box-shadow:0 1px 0 0 #DEE0D5; }
   .summary-table-head { padding: 12px 16px; background: #E8E4D6; border-bottom: 2px solid rgba(169,130,45,.5); font-family: 'Noto Serif Thai', serif; font-size: 15px; color: #1E293B; font-weight: 600; }
   .summary-table-head.green-theme { background: #E3E7DA; border-bottom: 2px solid rgba(31,122,83,.4); color: #1F7A53; }
+  .summary-table-head.blue-theme { background: #DBEAFE; border-bottom: 2px solid rgba(29,78,216,.4); color: #1D4ED8; }
   .summary-table-head.grand-theme { background: #1E293B; color: #F5F6F2; border-bottom: 2px solid rgba(169,130,45,.8); }
   .summary-table-body { padding: 0 16px; }
   .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #EEEFE9; font-size: 13px; }
@@ -142,6 +144,7 @@
   .summary-row .s-name { color: #2A2E24; }
   .summary-row .s-val { font-weight: 600; color: #B3261E; font-family: 'IBM Plex Mono', monospace; }
   .summary-row .s-val.green { color: #1F7A53; }
+  .summary-row .s-val.blue { color: #1D4ED8; }
   .summary-row .s-val.dark { color: #1E293B; font-size: 15px; }
 
   .icon { display:inline-block; vertical-align:-2px; }
@@ -173,7 +176,7 @@
   if(!firebase.apps.length){
     firebase.initializeApp(firebaseConfig);
   }
-  var dbRef = firebase.database().ref("budget_data_v2");
+  var dbRef = firebase.database().ref("budget_data");
 
   function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
   function thb(n){ n = isFinite(n) ? n : 0; return n.toLocaleString("th-TH",{minimumFractionDigits:0,maximumFractionDigits:2}); }
@@ -189,7 +192,8 @@
     undo: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>',
     chevDown: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
     chevUp: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>',
-    link: '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>'
+    link: '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>',
+    archive: '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>'
   };
 
   function expenseSet(){
@@ -210,7 +214,7 @@
     return labels.map(function(l,i){ return {id:uid(), label:l, paid:i<paidCount}; });
   }
 
-  function defaultMonthData(){
+  function defaultCurrentData(){
     var netDefault = 31450 - 875;
     var perPeriod = netDefault / 2;
     return {
@@ -235,9 +239,9 @@
 
   function defaultData(){
     return {
-      currentMonth: "08/2569",
-      monthsData: {
-        "08/2569": defaultMonthData()
+      selectedMonth: "08/2569",
+      history: {
+        "08/2569": defaultCurrentData()
       }
     };
   }
@@ -260,6 +264,16 @@
     if(btn) btn.disabled = undoStack.length === 0;
   }
 
+  function getCurrentMonthData(){
+    if(!state) return null;
+    if(!state.history) state.history = {};
+    if(!state.selectedMonth) state.selectedMonth = "08/2569";
+    if(!state.history[state.selectedMonth]){
+      state.history[state.selectedMonth] = defaultCurrentData();
+    }
+    return state.history[state.selectedMonth];
+  }
+
   function initFirebaseSync(){
     saveStatus = "กำลังโหลดข้อมูลล่าสุด...";
     renderStatusOnly();
@@ -267,8 +281,21 @@
     dbRef.on("value", function(snapshot){
       if(isRemoteUpdating) return;
       var val = snapshot.val();
-      if(val && val.monthsData){
+      if(val){
         state = val;
+        // Migration สำหรับโครงสร้างเก่าที่ยังไม่มีระบบประวัติรายเดือน
+        if(!state.history){
+          var oldData = JSON.parse(JSON.stringify(state));
+          state = {
+            selectedMonth: "08/2569",
+            history: {
+              "08/2569": oldData
+            }
+          };
+        }
+        if(!state.selectedMonth) state.selectedMonth = "08/2569";
+        var cur = getCurrentMonthData();
+        migrateCardXAuto(cur);
       } else {
         state = defaultData();
         dbRef.set(state);
@@ -307,20 +334,6 @@
     el.textContent = saveStatus;
   }
 
-  function currentMonthData(){
-    if(!state.monthsData[state.currentMonth]){
-      // ถ้าเลือกเดือนที่ยังไม่มีข้อมูล ให้คัดลอกโครงสร้างจากเดือนล่าสุดมาเริ่มต้น หรือใช้ default
-      var keys = Object.keys(state.monthsData);
-      var lastKey = keys[keys.length - 1];
-      if(lastKey && state.monthsData[lastKey]){
-        state.monthsData[state.currentMonth] = JSON.parse(JSON.stringify(state.monthsData[lastKey]));
-      } else {
-        state.monthsData[state.currentMonth] = defaultMonthData();
-      }
-    }
-    return state.monthsData[state.currentMonth];
-  }
-
   function cardStatus(c){
     if(!c || !c.months) return {paidCount:0, remaining:0, pct:0};
     var paidCount = c.months.filter(function(m){return m.paid;}).length;
@@ -329,16 +342,16 @@
     var pct = c.months.length ? Math.round(paidCount/c.months.length*100) : 0;
     return {paidCount:paidCount, remaining:remaining, pct:pct};
   }
-  function activeCardMonthlySum(mD){
-    if(!mD || !mD.cards) return 0;
-    return mD.cards.reduce(function(s,c){
+  function activeCardMonthlySum(cur){
+    if(!cur || !cur.cards) return 0;
+    return cur.cards.reduce(function(s,c){
       var st = cardStatus(c);
       return s + (st.remaining > 0 ? (Number(c.monthlyAmount)||0) : 0);
     }, 0);
   }
-  function cardXPerPeriod(mD){
-    var n = (mD && mD.periods) ? mD.periods.length : 1;
-    return activeCardMonthlySum(mD) / (n || 1);
+  function cardXPerPeriod(cur){
+    var n = (cur && cur.periods) ? cur.periods.length : 1;
+    return activeCardMonthlySum(cur) / (n || 1);
   }
   function effectiveAmount(item, computedCardX){
     return item.cardXAuto ? computedCardX : (Number(item.amount)||0);
@@ -348,28 +361,46 @@
     var inv = p.investments ? p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0) : 0;
     return {exp:exp, inv:inv, remaining:(Number(p.income)||0) - exp - inv};
   }
+  function migrateCardXAuto(cur){
+    if(!cur || !cur.periods) return;
+    cur.periods.forEach(function(p){
+      if(!p.expenses) return;
+      var hasAuto = p.expenses.some(function(i){ return i.cardXAuto; });
+      if(hasAuto) return;
+      var match = p.expenses.find(function(i){ return (i.name||"").trim().toLowerCase() === "cardx"; });
+      if(match) match.cardXAuto = true;
+    });
+  }
 
   function liveUpdateTotals(){
     if(!state) return;
-    var mD = currentMonthData();
+    var cur = getCurrentMonthData();
 
-    document.querySelectorAll("input[data-bind]").forEach(function(input){
+    document.querySelectorAll("input[data-bind], select[data-bind]").forEach(function(input){
       var bind = input.getAttribute("data-bind");
       var val = input.type === "number" ? (input.value === "" ? 0 : parseFloat(input.value)) : input.value;
-      setDeepValue(mD, bind, val);
+      if(bind.indexOf("selectedMonth") === 0){
+        state.selectedMonth = val;
+      } else {
+        setDeepValue(cur, bind, val);
+      }
     });
 
-    var netSalary = (Number(mD.salary)||0) - (Number(mD.ssoDeduction)||0) + (Number(mD.extraIncome)||0) + (Number(mD.allowanceIncome)||0);
-    var netEl = document.getElementById("net-salary-val");
-    if(netEl) netEl.textContent = "฿" + thb(netSalary);
+    var baseSalary = (Number(cur.salary)||0) - (Number(cur.ssoDeduction)||0);
+    var extra = Number(cur.extraIncome)||0;
+    var allowance = Number(cur.allowanceIncome)||0;
+    var totalNetIncome = baseSalary + extra + allowance;
 
-    var totalOutstanding = (mD.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
+    var netEl = document.getElementById("net-salary-val");
+    if(netEl) netEl.textContent = "฿" + thb(totalNetIncome);
+
+    var totalOutstanding = (cur.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
     var totalOutEl = document.getElementById("total-outstanding-val");
     if(totalOutEl) totalOutEl.textContent = "฿" + thb(totalOutstanding);
 
-    var numPeriods = (mD.periods || []).length || 1;
-    var perPeriodIncome = netSalary / numPeriods;
-    (mD.periods || []).forEach(function(p, pIdx){
+    var numPeriods = (cur.periods || []).length || 1;
+    var perPeriodIncome = totalNetIncome / numPeriods;
+    (cur.periods || []).forEach(function(p, pIdx){
       p.income = perPeriodIncome;
       var incInput = document.querySelector('input[data-bind="periods.' + pIdx + '.income"]');
       if(incInput && document.activeElement !== incInput){
@@ -377,13 +408,13 @@
       }
     });
 
-    var computedCardX = cardXPerPeriod(mD);
+    var computedCardX = cardXPerPeriod(cur);
 
     document.querySelectorAll(".line-row.auto-row input.amount").forEach(function(inp){
       inp.value = computedCardX;
     });
 
-    (mD.periods || []).forEach(function(p, pIdx){
+    (cur.periods || []).forEach(function(p, pIdx){
       var t = periodTotals(p, computedCardX);
 
       var expEl = document.getElementById("total-exp-" + pIdx);
@@ -399,15 +430,19 @@
       }
     });
 
-    updateCombinedSummaryUI(computedCardX, netSalary, mD);
+    updateCombinedSummaryUI(computedCardX, totalNetIncome);
   }
 
-  function updateCombinedSummaryUI(computedCardX, netSalary, mD){
+  function updateCombinedSummaryUI(computedCardX, totalNetIncome){
+    var cur = getCurrentMonthData();
+    if(!cur) return;
+
+    // 1. สรุปค่าใช้จ่ายแยกตามรายการ
     var expContainer = document.getElementById("combined-summary-body");
     var expMap = {};
     var totalExpAll = 0;
     
-    (mD.periods || []).forEach(function(p){
+    (cur.periods || []).forEach(function(p){
       if(!p.expenses) return;
       p.expenses.forEach(function(item){
         var key = (item.name || "ไม่มีชื่อ").trim();
@@ -431,11 +466,12 @@
       expContainer.innerHTML = html;
     }
 
+    // 2. สรุปเงินลงทุนแยกตามรายการ
     var invContainer = document.getElementById("combined-invest-body");
     var invMap = {};
     var totalInvAll = 0;
 
-    (mD.periods || []).forEach(function(p){
+    (cur.periods || []).forEach(function(p){
       if(!p.investments) return;
       p.investments.forEach(function(item){
         var key = (item.name || "ไม่มีชื่อ").trim();
@@ -459,11 +495,12 @@
       invContainer.innerHTML = invHtml;
     }
 
+    // 3. สรุปยอดรวมเบ็ดเสร็จทั้งหมด
     var grandContainer = document.getElementById("grand-summary-body");
     if(grandContainer){
-      var grandRemaining = netSalary - totalExpAll - totalInvAll;
+      var grandRemaining = totalNetIncome - totalExpAll - totalInvAll;
       grandContainer.innerHTML = '' +
-        '<div class="summary-row"><span class="s-name">รายรับรวมสุทธิ (เงินเดือน - ประกันสังคม + Extra + เบี้ยเลี้ยง)</span><span class="s-val dark">฿' + thb(netSalary) + '</span></div>' +
+        '<div class="summary-row"><span class="s-name">รายรับสุทธิทั้งหมด (เงินเดือน + ประกันสังคม + Extra + เบี้ยเลี้ยง)</span><span class="s-val dark">฿' + thb(totalNetIncome) + '</span></div>' +
         '<div class="summary-row"><span class="s-name">รวมค่าใช้จ่ายทั้งหมดทุกงวด</span><span class="s-val">฿' + thb(totalExpAll) + '</span></div>' +
         '<div class="summary-row"><span class="s-name">รวมเงินลงทุนทั้งหมดทุกงวด</span><span class="s-val green">฿' + thb(totalInvAll) + '</span></div>' +
         '<div class="summary-row"><span class="s-name"><b>ยอดเงินคงเหลือสุทธิ (รวมทุกงวด)</b></span><span class="s-val dark" style="color:' + (grandRemaining < 0 ? '#B3261E' : '#1F7A53') + '">฿' + thb(grandRemaining) + '</span></div>';
@@ -557,132 +594,144 @@
         '<span>/เดือน <input type="number" data-bind="cards.' + cIdx + '.monthlyAmount" value="' + c.monthlyAmount + '" /></span>' +
         '<button class="rmcard" data-action="remove-card" data-cidx="' + cIdx + '">' + ICONS.trash + ' ลบบัตร</button>' +
       '</div>' +
+      '<div class="progress-wrap">' +
+        '<div class="progress-labels"><span>จ่ายแล้ว ' + st.paidCount + '/' + (c.months?c.months.length:0) + ' งวด</span><span>' + st.pct + '%</span></div>' +
+        '<div class="progress-bar"><div class="progress-fill" style="width:' + st.pct + '%"></div></div>' +
+      '</div>' +
       body +
     '</div>';
+  }
+
+  function getAvailableMonths(){
+    if(!state || !state.history) return ["08/2569"];
+    var keys = Object.keys(state.history);
+    if(keys.indexOf("08/2569") === -1) keys.push("08/2569");
+    
+    // เรียงลำดับเดือน/ปี (เช่น 08/2569, 09/2569 ...)
+    keys.sort(function(a,b){
+      var pA = a.split("/");
+      var pB = b.split("/");
+      var numA = parseInt(pA[1]) * 100 + parseInt(pA[0]);
+      var numB = parseInt(pB[1]) * 100 + parseInt(pB[0]);
+      return numA - numB;
+    });
+    return keys;
   }
 
   function render(){
     var app = document.getElementById("app");
     if(!app || !state) return;
+    var cur = getCurrentMonthData();
+    var computedCardX = cardXPerPeriod(cur);
+    var netSalary = (Number(cur.salary)||0) - (Number(cur.ssoDeduction)||0) + (Number(cur.extraIncome)||0) + (Number(cur.allowanceIncome)||0);
+    var totalOutstanding = (cur.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
 
-    var mD = currentMonthData();
-    var netSalary = (Number(mD.salary)||0) - (Number(mD.ssoDeduction)||0) + (Number(mD.extraIncome)||0) + (Number(mD.allowanceIncome)||0);
-    var totalOutstanding = (mD.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
-    var computedCardX = cardXPerPeriod(mD);
+    var periodsHtml = (cur.periods || []).map(function(p,i){ return renderPeriod(p, i, computedCardX); }).join("");
+    var cardsHtml = (cur.cards || []).map(function(c,i){ return renderCard(c, i); }).join("");
 
-    // สร้างรายชื่อเดือนทั้งหมดที่มีการบันทึกไว้ในระบบสำหรับ Dropdown ดูย้อนหลัง
-    var availableMonths = Object.keys(state.monthsData).sort(function(a,b){
-      var partsA = a.split('/');
-      var partsB = b.split('/');
-      return (parseInt(partsA[1]) * 100 + parseInt(partsA[0])) - (parseInt(partsB[1]) * 100 + parseInt(partsB[0]));
-    });
-
-    var monthOptionsHtml = availableMonths.map(function(m){
-      return '<option value="' + esc(m) + '"' + (m === state.currentMonth ? ' selected' : '') + '>เดือน ' + esc(m) + '</option>';
-    }).join("");
-
-    var periodsHtml = (mD.periods || []).map(function(p, pIdx){
-      return renderPeriod(p, pIdx, computedCardX);
-    }).join("");
-
-    var cardsHtml = (mD.cards || []).map(function(c, cIdx){
-      return renderCard(c, cIdx);
+    var monthOptions = getAvailableMonths().map(function(m){
+      return '<option value="' + m + '" ' + (state.selectedMonth === m ? 'selected' : '') + '>เดือน ' + m + '</option>';
     }).join("");
 
     app.innerHTML = '' +
-      '<div class="cover">' +
-        '<div class="cover-inner">' +
-          '<div class="eyebrow serif">Expense & Investment Log</div>' +
-          '<h1>สมุดบัญชีค่าใช้จ่ายและลงทุน</h1>' +
-          '<div class="stat-grid">' +
-            '<div>' +
-              '<div class="stat-label">เลือกดูเดือนบันทึก</div>' +
-              '<div class="stat-value"><select id="month-selector">' + monthOptionsHtml + '</select></div>' +
-            '</div>' +
-            '<div>' +
-              '<div class="stat-label">เงินเดือนตั้งต้น</div>' +
-              '<div class="stat-value">฿<input type="number" data-bind="salary" value="' + (mD.salary||0) + '" /></div>' +
-            '</div>' +
-            '<div>' +
-              '<div class="stat-label">หักประกันสังคม</div>' +
-              '<div class="stat-value" style="color:#B3261E">฿<input type="number" data-bind="ssoDeduction" value="' + (mD.ssoDeduction||0) + '" style="color:#B3261E" /></div>' +
-            '</div>' +
-            '<div>' +
-              '<div class="stat-label">รายรับ Extra</div>' +
-              '<div class="stat-value" style="color:#1F7A53">฿<input type="number" data-bind="extraIncome" value="' + (mD.extraIncome||0) + '" style="color:#1F7A53" /></div>' +
-            '</div>' +
-            '<div>' +
-              '<div class="stat-label">เบี้ยเลี้ยง</div>' +
-              '<div class="stat-value" style="color:#1F7A53">฿<input type="number" data-bind="allowanceIncome" value="' + (mD.allowanceIncome||0) + '" style="color:#1F7A53" /></div>' +
-            '</div>' +
-            '<div>' +
-              '<div class="stat-label">รายรับสุทธิรวม</div>' +
-              '<div class="stat-value mono" id="net-salary-val" style="color:#1F7A53">฿' + thb(netSalary) + '</div>' +
-            '</div>' +
-            '<div>' +
-              '<div class="stat-label">ยอดหนี้บัตรคงเหลือ</div>' +
-              '<div class="stat-value mono" id="total-outstanding-val" style="color:#B3261E">฿' + thb(totalOutstanding) + '</div>' +
-            '</div>' +
+    '<div class="cover">' +
+      '<div class="cover-inner">' +
+        '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">' +
+          '<div>' +
+            '<div class="eyebrow">Financial Journal & Budget Planner</div>' +
+            '<h1 class="serif">สมุดบัญชีค่าใช้จ่ายและลงทุน</h1>' +
           '</div>' +
-          '<div class="cover-actions">' +
-            '<button class="btn-action-bottom" id="undo-btn" data-action="undo"' + (undoStack.length===0?' disabled':'') + '>' + ICONS.undo + ' ย้อนกลับการแก้ไข</button>' +
-            '<button class="btn-action-bottom" data-action="new-month">' + ICONS.plus + ' เปิดสมุดบันทึกเดือนใหม่</button>' +
-            '<button class="btn-action-bottom" data-action="reset-default">' + ICONS.reset + ' โหลดค่าเริ่มต้น</button>' +
+          '<div style="display:flex; align-items:center; gap:8px;">' +
+            '<span style="font-size:12px; font-weight:500;">เลือกเดือน:</span>' +
+            '<select data-bind="selectedMonth" id="month-selector" style="padding:6px 10px; border:1px solid rgba(30,41,59,.2); border-radius:3px; background:#fff; font-size:13px; font-weight:600; color:#1E293B; outline:none;">' +
+              monthOptions +
+            '</select>' +
+            '<button class="btn-action-bottom" data-action="add-new-month" title="สร้างบันทึกเดือนใหม่ถัดไป">' + ICONS.archive + ' เปิดเดือนใหม่</button>' +
           '</div>' +
-          '<div id="save-status" class="save-status"></div>' +
+        '</div>' +
+        '<div class="stat-grid">' +
+          '<div>' +
+            '<div class="stat-label">เงินเดือนตั้งต้น</div>' +
+            '<div class="stat-value mono"><input type="number" data-bind="salary" value="' + cur.salary + '" /></div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="stat-label">หัก ประกันสังคม</div>' +
+            '<div class="stat-value mono"><input type="number" data-bind="ssoDeduction" value="' + cur.ssoDeduction + '" /></div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="stat-label">รายได้ Extra (ไม่แน่นอน)</div>' +
+            '<div class="stat-value mono"><input type="number" data-bind="extraIncome" value="' + (cur.extraIncome || 0) + '" /></div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="stat-label">ช่องเบี้ยเลี้ยง</div>' +
+            '<div class="stat-value mono"><input type="number" data-bind="allowanceIncome" value="' + (cur.allowanceIncome || 0) + '" /></div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid; grid-template-columns: repeat(2,1fr); gap:14px; margin-top:14px;">' +
+          '<div>' +
+            '<div class="stat-label">รายรับสุทธิรวมทั้งหมดเดือนนี้</div>' +
+            '<div class="stat-value mono" style="color:#1F7A53; font-weight:600;" id="net-salary-val">฿' + thb(netSalary) + '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="stat-label">ยอดหนี้บัตรคงเหลือรวมทั้งหมด</div>' +
+            '<div class="stat-value mono" style="color:#B3261E; font-weight:600;" id="total-outstanding-val">฿' + thb(totalOutstanding) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cover-actions">' +
+          '<button class="btn-action-bottom" data-action="reset-defaults">' + ICONS.reset + ' โหลดค่าเริ่มต้น</button>' +
+          '<button class="btn-action-bottom" id="undo-btn" data-action="undo" disabled>' + ICONS.undo + ' ย้อนกลับ (Undo)</button>' +
+          '<div id="save-status" class="save-status" style="margin:0; margin-left:auto;">' + saveStatus + '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="wrap">' +
-        '<div style="margin-top:24px"><div class="periods-grid">' + periodsHtml + '</div></div>' +
-        '<div class="cards-header"><h2 class="sub">รายการผ่อนบัตรเครดิต</h2><button class="add-card-btn" data-action="add-card">' + ICONS.plus + ' เพิ่มบัตร/รายการผ่อน</button></div>' +
-        '<div class="cards-list">' + cardsHtml + '</div>' +
-        
-        /* ตารางสรุปค่าใช้จ่ายแยกตามรายการ */
-        '<div class="summary-table-card">' +
-          '<div class="summary-table-head">สรุปค่าใช้จ่ายแยกตามรายการ (เดือน ' + esc(state.currentMonth) + ')</div>' +
-          '<div class="summary-table-body" id="combined-summary-body"></div>' +
-        '</div>' +
+    '</div>' +
+    '<div class="wrap">' +
+      '<div class="periods-grid" style="margin-top:20px;">' + periodsHtml + '</div>' +
 
-        /* ตารางสรุปเงินลงทุนแยกตามรายการ */
-        '<div class="summary-table-card">' +
-          '<div class="summary-table-head green-theme">สรุปเงินลงทุนแยกตามรายการ (เดือน ' + esc(state.currentMonth) + ')</div>' +
-          '<div class="summary-table-body" id="combined-invest-body"></div>' +
-        '</div>' +
+      // ตารางสรุปภาพรวมค่าใช้จ่าย
+      '<div class="summary-table-card">' +
+        '<div class="summary-table-head">📊 สรุปรายการค่าใช้จ่ายประจำเดือน ' + esc(state.selectedMonth) + ' (แยกตามประเภท)</div>' +
+        '<div class="summary-table-body" id="combined-summary-body"></div>' +
+      '</div>' +
 
-        /* ตารางสรุปภาพรวมทั้งหมด */
-        '<div class="summary-table-card">' +
-          '<div class="summary-table-head grand-theme">สรุปยอดเบ็ดเสร็จภาพรวม (เดือน ' + esc(state.currentMonth) + ')</div>' +
-          '<div class="summary-table-body" id="grand-summary-body"></div>' +
-        '</div>' +
-      '</div>';
+      // ตารางสรุปภาพรวมเงินลงทุน
+      '<div class="summary-table-card">' +
+        '<div class="summary-table-head green-theme">🌱 สรุปรายการเงินลงทุนประจำเดือน ' + esc(state.selectedMonth) + ' (แยกตามประเภท)</div>' +
+        '<div class="summary-table-body" id="combined-invest-body"></div>' +
+      '</div>' +
 
-    liveUpdateTotals();
-  }
+      // ตารางสรุปยอดเบ็ดเสร็จสุทธิ
+      '<div class="summary-table-card">' +
+        '<div class="summary-table-head grand-theme">📌 สรุปยอดเงินสุทธิประจำเดือน ' + esc(state.selectedMonth) + '</div>' +
+        '<div class="summary-table-body" id="grand-summary-body"></div>' +
+      '</div>' +
 
-  function getDeepValue(obj, path){
-    var parts = path.split(".");
-    var curr = obj;
-    for(var i=0; i<parts.length; i++){
-      if(curr == null) return null;
-      curr = curr[parts[i]];
-    }
-    return curr;
+      '<div class="cards-header">' +
+        '<h2 class="sub">บัตรเครดิตและการผ่อนชำระ</h2>' +
+        '<button class="add-card-btn" data-action="add-card">' + ICONS.plus + ' เพิ่มบัตร / รายการผ่อน</button>' +
+      '</div>' +
+      '<div class="cards-list">' + cardsHtml + '</div>' +
+    '</div>';
+
+    updateUndoButtonState();
+    updateCombinedSummaryUI(computedCardX, netSalary);
   }
 
   function setDeepValue(obj, path, val){
     var parts = path.split(".");
     var curr = obj;
     for(var i=0; i<parts.length-1; i++){
-      if(!curr[parts[i]]) curr[parts[i]] = {};
-      curr = curr[parts[i]];
+      var p = parts[i];
+      if(!curr[p]) curr[p] = {};
+      curr = curr[p];
     }
     curr[parts[parts.length-1]] = val;
   }
 
-  // Event Listeners
+  // Event Listeners สำหรับการเปลี่ยนแปลงข้อมูลแบบ Real-time
   document.addEventListener("input", function(e){
     var target = e.target;
-    if(target.matches("input[data-bind]")){
+    var bind = target.getAttribute("data-bind");
+    if(bind || target.classList.contains("amount") || target.classList.contains("period-income-input") || target.classList.contains("cname") || target.classList.contains("cnote") || target.classList.contains("daylabel")){
       liveUpdateTotals();
       pushUndo();
       save();
@@ -691,143 +740,142 @@
 
   document.addEventListener("change", function(e){
     var target = e.target;
-    if(target.id === "month-selector"){
-      state.currentMonth = target.value;
+    if(target && target.getAttribute("data-bind") === "selectedMonth"){
+      pushUndo();
+      state.selectedMonth = target.value;
       render();
+      save();
     }
   });
 
   document.addEventListener("click", function(e){
-    var btn = e.target.closest("button");
+    var btn = e.target.closest("button[data-action]");
     if(!btn) return;
     var action = btn.getAttribute("data-action");
-    if(!action) return;
-
-    var mD = currentMonthData();
+    var cur = getCurrentMonthData();
 
     if(action === "undo"){
-      if(undoStack.length > 0){
-        state = undoStack.pop();
-        updateUndoButtonState();
-        save();
+      if(undoStack.length === 0) return;
+      state = undoStack.pop();
+      updateUndoButtonState();
+      render();
+      save();
+      return;
+    }
+
+    pushUndo();
+
+    if(action === "reset-defaults"){
+      if(confirm("ต้องการรีเซ็ตข้อมูลของเดือน " + state.selectedMonth + " กลับเป็นค่าเริ่มต้นหรือไม่?")){
+        cur.salary = 31450;
+        cur.ssoDeduction = 875;
+        cur.extraIncome = 0;
+        cur.allowanceIncome = 0;
+        cur.periods = [
+          {id:uid(), label:"งวดที่ 1", dayLabel:"D5", income:(31450-875)/2, open:true, expenses:expenseSet(), investments:investSet()},
+          {id:uid(), label:"งวดที่ 2", dayLabel:"D20", income:(31450-875)/2, open:true, expenses:expenseSet(), investments:investSet()}
+        ];
         render();
-      }
-    } else if(action === "reset-default"){
-      if(confirm("ต้องการรีเซ็ตข้อมูลของเดือนนี้เป็นค่าเริ่มต้นหรือไม่?")){
-        pushUndo();
-        state.monthsData[state.currentMonth] = defaultMonthData();
         save();
-        render();
-      }
-    } else if(action === "new-month"){
-      var defaultNewMonthName = "09/2569";
-      var mInput = prompt("กรุณาระบุเดือนและปีที่ต้องการบันทึกใหม่ (เช่น MM/YYYY หรือ MM/BBBB เช่น 09/2569):", defaultNewMonthName);
-      if(mInput){
-        mInput = mInput.trim();
-        pushUndo();
-        state.currentMonth = mInput;
-        if(!state.monthsData[mInput]){
-          // คัดลอกข้อมูลจากเดือนปัจจุบันล่าสุดมาต่อยอด
-          var keys = Object.keys(state.monthsData);
-          var lastKey = keys[keys.length - 1];
-          if(lastKey && state.monthsData[lastKey]){
-            state.monthsData[mInput] = JSON.parse(JSON.stringify(state.monthsData[lastKey]));
-          } else {
-            state.monthsData[mInput] = defaultMonthData();
-          }
-        }
-        save();
-        render();
       }
     } else if(action === "add-item"){
       var path = btn.getAttribute("data-path");
-      if(path){
-        pushUndo();
-        var arr = getDeepValue(mD, path);
-        if(arr){
-          arr.push({id:uid(), name:"", amount:0});
-          save();
-          render();
-        }
+      var parts = path.split(".");
+      var targetArr = cur;
+      for(var i=0; i<parts.length; i++){
+        targetArr = targetArr[parts[i]];
       }
+      targetArr.push({id:uid(), name:"", amount:0});
+      render();
+      save();
     } else if(action === "remove-item"){
       var path = btn.getAttribute("data-path");
       var idx = parseInt(btn.getAttribute("data-idx"));
-      if(path && !isNaN(idx)){
-        pushUndo();
-        var arr = getDeepValue(mD, path);
-        if(arr){
-          arr.splice(idx, 1);
-          save();
-          render();
-        }
+      var parts = path.split(".");
+      var targetArr = cur;
+      for(var i=0; i<parts.length; i++){
+        targetArr = targetArr[parts[i]];
       }
+      targetArr.splice(idx, 1);
+      render();
+      save();
     } else if(action === "toggle-cardx-link"){
       var path = btn.getAttribute("data-path");
       var idx = parseInt(btn.getAttribute("data-idx"));
-      if(path && !isNaN(idx)){
-        pushUndo();
-        var arr = getDeepValue(mD, path);
-        if(arr && arr[idx]){
-          arr[idx].cardXAuto = !arr[idx].cardXAuto;
-          save();
-          render();
-        }
+      var parts = path.split(".");
+      var targetArr = cur;
+      for(var i=0; i<parts.length; i++){
+        targetArr = targetArr[parts[i]];
       }
+      var item = targetArr[idx];
+      item.cardXAuto = !item.cardXAuto;
+      if(item.cardXAuto) item.name = "CardX";
+      render();
+      save();
     } else if(action === "toggle-card-open"){
       var cidx = parseInt(btn.getAttribute("data-cidx"));
-      if(!isNaN(cidx) && mD.cards[cidx]){
-        mD.cards[cidx].open = !mD.cards[cidx].open;
-        render();
-      }
-    } else if(action === "add-card"){
-      pushUndo();
-      if(!mD.cards) mD.cards = [];
-      mD.cards.push({
-        id:uid(), name:"บัตรใหม่", note:"", totalAmount:0, monthlyAmount:0, interest:"0%", open:true,
-        months: [ {id:uid(), label:"8/26", paid:false} ]
-      });
-      save();
+      cur.cards[cidx].open = !cur.cards[cidx].open;
       render();
-    } else if(action === "remove-card"){
-      var cidx = parseInt(btn.getAttribute("data-cidx"));
-      if(!isNaN(cidx) && confirm("ต้องการลบบัตรนี้ใช่หรือไม่?")){
-        pushUndo();
-        mD.cards.splice(cidx, 1);
-        save();
-        render();
-      }
     } else if(action === "toggle-month"){
       var cidx = parseInt(btn.getAttribute("data-cidx"));
       var midx = parseInt(btn.getAttribute("data-midx"));
-      if(!isNaN(cidx) && !isNaN(midx) && mD.cards[cidx] && mD.cards[cidx].months[midx]){
-        pushUndo();
-        mD.cards[cidx].months[midx].paid = !mD.cards[cidx].months[midx].paid;
-        save();
-        render();
-      }
+      var m = cur.cards[cidx].months[midx];
+      m.paid = !m.paid;
+      render();
+      save();
     } else if(action === "remove-month"){
       var cidx = parseInt(btn.getAttribute("data-cidx"));
       var midx = parseInt(btn.getAttribute("data-midx"));
-      if(!isNaN(cidx) && !isNaN(midx) && mD.cards[cidx] && mD.cards[cidx].months){
-        pushUndo();
-        mD.cards[cidx].months.splice(midx, 1);
-        save();
-        render();
-      }
+      cur.cards[cidx].months.splice(midx, 1);
+      render();
+      save();
     } else if(action === "add-month"){
       var cidx = parseInt(btn.getAttribute("data-cidx"));
-      var inputEl = document.getElementById("newmonth-" + cidx);
-      if(!isNaN(cidx) && inputEl){
-        var val = inputEl.value.trim();
-        if(val){
-          pushUndo();
-          if(!mD.cards[cidx].months) mD.cards[cidx].months = [];
-          mD.cards[cidx].months.push({id:uid(), label:val, paid:false});
-          save();
-          render();
-        }
+      var inp = document.getElementById("newmonth-" + cidx);
+      if(inp && inp.value.trim()){
+        if(!cur.cards[cidx].months) cur.cards[cidx].months = [];
+        cur.cards[cidx].months.push({id:uid(), label:inp.value.trim(), paid:false});
+        render();
+        save();
       }
+    } else if(action === "add-card"){
+      if(!cur.cards) cur.cards = [];
+      cur.cards.push({
+        id:uid(), name:"CardX", note:"รายการใหม่", totalAmount:0, monthlyAmount:0, interest:"0%", open:true,
+        months: monthsFrom(["8/26","9/26"], 0)
+      });
+      render();
+      save();
+    } else if(action === "remove-card"){
+      var cidx = parseInt(btn.getAttribute("data-cidx"));
+      if(confirm("ต้องการลบบัตรเครดิตนี้หรือไม่?")){
+        cur.cards.splice(cidx, 1);
+        render();
+        save();
+      }
+    } else if(action === "add-new-month"){
+      var monthsList = getAvailableMonths();
+      var lastMonth = monthsList[monthsList.length - 1]; // เช่น "08/2569"
+      var parts = lastMonth.split("/");
+      var mNum = parseInt(parts[0]) + 1;
+      var yNum = parseInt(parts[1]);
+      if(mNum > 12){
+        mNum = 1;
+        yNum += 1;
+      }
+      var nextMonthStr = (mNum < 10 ? "0" + mNum : mNum) + "/" + yNum;
+      
+      if(!state.history[nextMonthStr]){
+        // ทำการโคลนข้อมูลจากเดือนล่าสุดมาเป็นตั้งต้นของเดือนใหม่เพื่อให้กรอกต่อง่ายขึ้น
+        var clonedData = JSON.parse(JSON.stringify(cur));
+        // รีเซ็ตรายได้เสริมในเดือนใหม่เป็น 0 หรือคงค่าเดิมก็ได้ตามต้องการ
+        clonedData.extraIncome = 0;
+        clonedData.allowanceIncome = 0;
+        state.history[nextMonthStr] = clonedData;
+      }
+      state.selectedMonth = nextMonthStr;
+      render();
+      save();
     }
   });
 
