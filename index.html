@@ -130,7 +130,7 @@
   .cards-list { display:flex; flex-direction:column; gap:16px; margin-bottom:20px; }
 </style>
 
-<!-- Firebase SDK (Compat Version สำหรับใช้งานง่ายในไฟล์เดี่ยว) -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
@@ -251,7 +251,7 @@
         saveStatus = "บันทึกไม่สำเร็จ";
         renderStatusOnly();
       });
-    }, 300);
+    }, 500);
   }
 
   function renderStatusOnly(){
@@ -325,7 +325,7 @@
         linkBtn +
         '<input class="name" data-bind="' + path + '.' + idx + '.name" value="' + esc(item.name) + '" placeholder="รายการ" />' +
         (isAuto ? '<span class="auto-badge">อัตโนมัติ</span>' : '') +
-        '<div class="amt"><span>฿</span><input class="amount ' + accentClass + '" type="number" data-bind="' + path + '.' + idx + '.amount" data-path="' + path + '" data-idx="' + idx + '" value="' + displayAmount + '"' + (isAuto?' disabled':'') + ' /></div>' +
+        '<div class="amt"><span>฿</span><input class="amount ' + accentClass + '" type="number" data-model="' + path + '.' + idx + '.amount" value="' + displayAmount + '"' + (isAuto?' disabled':'') + ' /></div>' +
         '<button class="rm" data-action="remove-item" data-path="' + path + '" data-idx="' + idx + '">' + ICONS.trash + '</button>' +
       '</div>';
   }
@@ -342,22 +342,22 @@
         '<div class="left"><span class="serif" style="font-size:15px">' + esc(p.label) + '</span>' +
         '<input class="daylabel" data-bind="periods.' + pIdx + '.dayLabel" value="' + esc(p.dayLabel) + '" /></div>' +
         '<div class="income"><span>เงินเข้างวดนี้</span><span>฿</span>' +
-          '<input type="number" class="period-income-input" data-pidx="' + pIdx + '" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
+          '<input type="number" data-model="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
       '</div>' +
       '<div class="section">' +
         '<div class="section-title">' + ICONS.wallet + ' ค่าใช้จ่าย</div>' +
         '<div class="link-hint">' + ICONS.link + ' สามารถพิมพ์แก้ไขตัวเลขเองได้ หรือคลิกไอคอนโซ่เพื่อผูกยอดกับบัตรเครดิตอัตโนมัติ</div>' +
         rows +
         '<button class="add-line" data-action="add-item" data-path="' + expPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
-        '<div class="total-row"><span>รวมค่าใช้จ่าย</span><b class="mono" style="color:#B3261E">฿' + thb(t.exp) + '</b></div>' +
+        '<div class="total-row"><span>รวมค่าใช้จ่าย</span><b class="mono" style="color:#B3261E" id="exp-total-' + pIdx + '">฿' + thb(t.exp) + '</b></div>' +
       '</div>' +
       '<div class="section" style="border-top:1px solid #EEEFE9">' +
         '<div class="section-title">' + ICONS.piggy + ' เงินลงทุน</div>' +
         invRows +
         '<button class="add-line" data-action="add-item" data-path="' + invPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
-        '<div class="total-row"><span>รวมเงินลงทุน</span><b class="mono" style="color:#1F7A53">฿' + thb(t.inv) + '</b></div>' +
+        '<div class="total-row"><span>รวมเงินลงทุน</span><b class="mono" style="color:#1F7A53" id="inv-total-' + pIdx + '">฿' + thb(t.inv) + '</b></div>' +
       '</div>' +
-      '<div class="remain"><span>คงเหลือหลังหักทุกอย่าง</span><span class="val mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '">฿' + thb(t.remaining) + '</span></div>' +
+      '<div class="remain"><span>คงเหลือหลังหักทุกอย่าง</span><span class="val mono" id="period-remain-' + pIdx + '" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '">฿' + thb(t.remaining) + '</span></div>' +
     '</div>';
   }
 
@@ -395,8 +395,8 @@
         '<button class="toggle" data-action="toggle-card-open" data-cidx="' + cIdx + '">' + (c.open?ICONS.chevUp:ICONS.chevDown) + '</button>' +
       '</div>' +
       '<div class="ct-sum">' +
-        '<span>ยอดรวม <input type="number" data-bind="cards.' + cIdx + '.totalAmount" value="' + c.totalAmount + '" /></span>' +
-        '<span>/เดือน <input type="number" data-bind="cards.' + cIdx + '.monthlyAmount" value="' + c.monthlyAmount + '" /></span>' +
+        '<span>ยอดรวม <input type="number" data-model="cards.' + cIdx + '.totalAmount" value="' + c.totalAmount + '" /></span>' +
+        '<span>/เดือน <input type="number" data-model="cards.' + cIdx + '.monthlyAmount" value="' + c.monthlyAmount + '" /></span>' +
         '<button class="rmcard" data-action="remove-card" data-cidx="' + cIdx + '">' + ICONS.trash + ' ลบบัตร</button>' +
       '</div>' +
       '<div class="progress-wrap">' +
@@ -421,8 +421,8 @@
         '<button class="reset-btn" data-action="reset">' + ICONS.reset + ' รีเซ็ต</button>' +
       '</div>' +
       '<div class="stat-grid">' +
-        '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" id="salary-input" data-bind="salary" value="' + state.salary + '" /></div></div>' +
-        '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value">฿<input type="number" id="sso-input" data-bind="ssoDeduction" value="' + state.ssoDeduction + '" style="width:70px" /></div></div>' +
+        '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" data-model="salary" value="' + state.salary + '" /></div></div>' +
+        '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value">฿<input type="number" data-model="ssoDeduction" value="' + state.ssoDeduction + '" style="width:70px" /></div></div>' +
         '<div><div class="stat-label">เงินเดือนสุทธิ</div><div class="stat-value mono" id="net-salary-val">฿' + thb(netSalary) + '</div></div>' +
         '<div><div class="stat-label">บัตรเครดิตคงค้างรวม</div><div class="stat-value mono" style="color:#B3261E">฿' + thb(totalOutstanding) + '</div></div>' +
       '</div>' +
@@ -495,94 +495,78 @@
 
   function handleInput(e){
     var el = e.target;
-    var bind = el.getAttribute && el.getAttribute("data-bind");
-    if(!bind) return;
+    var modelPath = el.getAttribute("data-model");
+    var bindPath = el.getAttribute("data-bind");
     
-    var value = el.value;
-
-    if(bind === "salary" || bind === "ssoDeduction"){
-      state[bind] = value === "" ? 0 : parseFloat(value) || 0;
+    // สำหรับช่องข้อความทั่วไป (ชื่อรายการ, หมายเหตุ) ใช้โครงสร้างเดิมโดยอัปเดต state และบันทึก
+    if(bindPath){
+      setPath(state, bindPath, el.value);
       save();
-      updateLiveTotals();
       return;
-    } else if(bind.indexOf(".expenses.") !== -1 || bind.indexOf(".investments.") !== -1){
-      var pidx = el.getAttribute("data-path");
-      var idx = el.getAttribute("data-idx");
-      if(pidx && idx !== null){
-        var list = getPath(state, pidx);
-        if(list && list[+idx]){
-          list[+idx].amount = value === "" ? 0 : parseFloat(value) || 0;
-        }
-      }
-    } else {
-      setPath(state, bind, value);
     }
 
-    save();
-    
-    if(bind.indexOf("cards.") !== -1){
-      render();
-    } else {
-      updateLiveTotals();
+    // สำหรับช่องตัวเลข (ใช้ data-model) อัปเดตค่าลงใน state และคำนวณผลรวมใหม่แบบ Realtime โดยไม่สั่ง render() ใหม่ทั้งหน้า
+    if(modelPath){
+      var val = el.value === "" ? 0 : (parseFloat(el.value) || 0);
+      setPath(state, modelPath, val);
+      save();
+      updateLiveCalculations();
     }
   }
 
-  function updateLiveTotals(){
-    var salaryEl = document.getElementById("salary-input");
-    var ssoEl = document.getElementById("sso-input");
-    if(salaryEl) state.salary = salaryEl.value === "" ? 0 : (parseFloat(salaryEl.value) || 0);
-    if(ssoEl) state.ssoDeduction = ssoEl.value === "" ? 0 : (parseFloat(ssoEl.value) || 0);
+  function updateLiveCalculations(){
+    if(!state) return;
 
-    var netSalary = state.salary - (Number(state.ssoDeduction) || 0);
-    var netSalaryEl = document.getElementById("net-salary-val");
-    if(netSalaryEl) netSalaryEl.textContent = "฿" + thb(netSalary);
+    // คำนวณเงินเดือนสุทธิ
+    var netSalary = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
+    var netEl = document.getElementById("net-salary-val");
+    if(netEl) netEl.textContent = "฿" + thb(netSalary);
 
     var computedCardX = cardXPerPeriod(state);
-    var cardEls = document.querySelectorAll(".periods-grid .card");
-    
-    (state.periods || []).forEach(function(p, pIdx){
-      var cardEl = cardEls[pIdx];
-      if(!cardEl) return;
 
-      var incomeInput = cardEl.querySelector(".p-head .income input");
-      var income = incomeInput ? (parseFloat(incomeInput.value) || 0) : p.income;
-      p.income = income;
+    // อัปเดตตัวเลขในแต่ละงวด
+    if(state.periods){
+      state.periods.forEach(function(p, pIdx){
+        var cardEl = document.querySelector('.card[data-pidx="' + pIdx + '"]');
+        if(!cardEl) return;
 
-      var expSection = cardEl.querySelectorAll(".section")[0];
-      if(expSection){
-        var expInputs = expSection.querySelectorAll("input.amount");
+        // ดึงค่ายอดใช้จ่ายทั้งหมดในงวดนี้จาก DOM ที่ผู้ใช้กรอก
+        var expInputs = cardEl.querySelectorAll('.section:nth-of-type(1) input.amount');
         var totalExp = 0;
-        expInputs.forEach(function(input, idx){
-          var val = parseFloat(input.value) || 0;
-          totalExp += val;
-          if(p.expenses && p.expenses[idx]) p.expenses[idx].amount = val;
+        expInputs.forEach(function(inp, i){
+          var v = inp.value === "" ? 0 : (parseFloat(inp.value)||0);
+          totalExp += v;
+          if(p.expenses && p.expenses[i]) p.expenses[i].amount = v;
         });
-        var expTotalRow = expSection.querySelector(".total-row b");
-        if(expTotalRow) expTotalRow.textContent = "฿" + thb(totalExp);
-      }
 
-      var invSection = cardEl.querySelectorAll(".section")[1];
-      if(invSection){
-        var invInputs = invSection.querySelectorAll("input.amount");
+        // ดึงค่ายอดลงทุนทั้งหมดในงวดนี้จาก DOM ที่ผู้ใช้กรอก
+        var invInputs = cardEl.querySelectorAll('.section:nth-of-type(2) input.amount');
         var totalInv = 0;
-        invInputs.forEach(function(input, idx){
-          var val = parseFloat(input.value) || 0;
-          totalInv += val;
-          if(p.investments && p.investments[idx]) p.investments[idx].amount = val;
+        invInputs.forEach(function(inp, i){
+          var v = inp.value === "" ? 0 : (parseFloat(inp.value)||0);
+          totalInv += v;
+          if(p.investments && p.investments[i]) p.investments[i].amount = v;
         });
-        var invTotalRow = invSection.querySelector(".total-row b");
-        if(invTotalRow) invTotalRow.textContent = "฿" + thb(invTotalRow);
-      }
 
-      var remainEl = cardEl.querySelector(".remain .val");
-      if(remainEl){
+        // อัปเดต UI ยอดรวมค่าใช้จ่ายและเงินลงทุน
+        var expTotalEl = document.getElementById("exp-total-" + pIdx);
+        if(expTotalEl) expTotalEl.textContent = "฿" + thb(totalExp);
+
+        var invTotalEl = document.getElementById("inv-total-" + pIdx);
+        if(invTotalEl) invTotalEl.textContent = "฿" + thb(totalInv);
+
+        // คำนวณยอดคงเหลือจริง
         var currentExp = p.expenses ? p.expenses.reduce(function(s,i){return s+effectiveAmount(i, computedCardX);},0) : 0;
         var currentInv = p.investments ? p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0) : 0;
-        var rem = income - currentExp - currentInv;
-        remainEl.textContent = "฿" + thb(rem);
-        remainEl.style.color = rem < 0 ? "#B3261E" : "#1E293B";
-      }
-    });
+        var rem = (Number(p.income)||0) - currentExp - currentInv;
+
+        var remEl = document.getElementById("period-remain-" + pIdx);
+        if(remEl){
+          remEl.textContent = "฿" + thb(rem);
+          remEl.style.color = rem < 0 ? "#B3261E" : "#1E293B";
+        }
+      });
+    }
   }
 
   document.addEventListener("click", handleClick);
