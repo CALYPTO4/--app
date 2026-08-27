@@ -212,12 +212,14 @@
   var saveTimer = null;
   var saveStatus = "";
   var isRemoteUpdating = false;
+  var isTyping = false; // ป้องกันไม่ให้รีเรนเดอร์ทับขณะผู้ใช้กำลังพิมพ์
 
   function initFirebaseSync(){
     saveStatus = "กำลังโหลด...";
     renderStatusOnly();
 
     dbRef.on("value", function(snapshot){
+      if(isTyping) return; // หากกำลังพิมพ์อยู่ ข้ามการซิงค์ชั่วคราว
       var val = snapshot.val();
       if(val){
         state = val;
@@ -244,6 +246,7 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function(){
       dbRef.set(state).then(function(){
+        isTyping = false; // ปลดล็อคเมื่อบันทึกเสร็จเรียบร้อย
         saveStatus = "บันทึกแล้ว";
         renderStatusOnly();
         setTimeout(function(){ if(saveStatus==="บันทึกแล้ว"){ saveStatus=""; renderStatusOnly(); } }, 1500);
@@ -251,7 +254,7 @@
         saveStatus = "บันทึกไม่สำเร็จ";
         renderStatusOnly();
       });
-    }, 500);
+    }, 600);
   }
 
   function renderStatusOnly(){
@@ -261,17 +264,16 @@
     el.textContent = saveStatus;
   }
 
-  function getPath(obj, path){
+  // ระบบเข้าถึงและกำหนดค่าใน Object ตาม Path สตริงที่กำหนดได้อย่างแม่นยำ
+  function setNestedValue(obj, path, value){
     var parts = path.split(".");
-    var cur = obj;
-    for(var i=0;i<parts.length;i++){ if(cur) cur = cur[parts[i]]; }
-    return cur;
-  }
-  function setPath(obj, path, value){
-    var parts = path.split(".");
-    var cur = obj;
-    for(var i=0;i<parts.length-1;i++){ cur = cur[parts[i]]; }
-    if(cur) cur[parts[parts.length-1]] = value;
+    var curr = obj;
+    for(var i=0; i<parts.length-1; i++){
+      var p = parts[i];
+      if(!curr[p]) curr[p] = {};
+      curr = curr[p];
+    }
+    curr[parts[parts.length-1]] = value;
   }
 
   function cardStatus(c){
@@ -325,7 +327,7 @@
         linkBtn +
         '<input class="name" data-bind="' + path + '.' + idx + '.name" value="' + esc(item.name) + '" placeholder="รายการ" />' +
         (isAuto ? '<span class="auto-badge">อัตโนมัติ</span>' : '') +
-        '<div class="amt"><span>฿</span><input class="amount ' + accentClass + '" type="number" data-bind="' + path + '.' + idx + '.amount" data-path="' + path + '" data-idx="' + idx + '" value="' + displayAmount + '"' + (isAuto?' disabled':'') + ' /></div>' +
+        '<div class="amt"><span>฿</span><input class="amount ' + accentClass + '" type="number" data-bind="' + path + '.' + idx + '.amount" value="' + displayAmount + '"' + (isAuto?' disabled':'') + ' /></div>' +
         '<button class="rm" data-action="remove-item" data-path="' + path + '" data-idx="' + idx + '">' + ICONS.trash + '</button>' +
       '</div>';
   }
@@ -342,7 +344,7 @@
         '<div class="left"><span class="serif" style="font-size:15px">' + esc(p.label) + '</span>' +
         '<input class="daylabel" data-bind="periods.' + pIdx + '.dayLabel" value="' + esc(p.dayLabel) + '" /></div>' +
         '<div class="income"><span>เงินเข้างวดนี้</span><span>฿</span>' +
-          '<input type="number" class="period-income-input" data-pidx="' + pIdx + '" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
+          '<input type="number" class="period-income-input" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
       '</div>' +
       '<div class="section">' +
         '<div class="section-title">' + ICONS.wallet + ' ค่าใช้จ่าย</div>' +
@@ -438,46 +440,37 @@
     renderStatusOnly();
   }
 
-  // จัดการอีเวนต์ Input แบบ Realtime โดยไม่ออกไปสั่ง Render หน้าจอซ้ำซ้อนขณะพิมพ์
+  // จัดการอีเวนต์ Input แบบตรงไปตรงมาและล็อคสถานะการพิมพ์ไม่ให้รีเรนเดอร์ขัดจังหวะ
   document.addEventListener("input", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
 
+    isTyping = true; // ล็อคทันทีที่ผู้ใช้เริ่มพิมพ์ เพื่อไม่ให้ Firebase ดึงข้อมูลมาทับ
+
     var rawVal = el.value;
     var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
 
-    if(bind === "salary" || bind === "ssoDeduction"){
-      state[bind] = value;
-    } else if(bind.indexOf(".expenses.") !== -1 || bind.indexOf(".investments.") !== -1){
-      var pidx = el.getAttribute("data-path");
-      var idx = el.getAttribute("data-idx");
-      if(pidx && idx !== null){
-        var list = getPath(state, pidx);
-        if(list && list[+idx]){
-          if(bind.indexOf(".name") !== -1){
-            list[+idx].name = value;
-          } else {
-            list[+idx].amount = value;
-          }
-        }
-      }
-    } else {
-      setPath(state, bind, value);
-    }
-
+    setNestedValue(state, bind, value);
     save();
   });
 
-  // จัดการอีเวนต์ Click เฉพาะปุ่มสั่งการ (เพิ่ม, ลบ, ติ๊กชำระ) ซึ่งจำเป็นต้อง Render หน้าจอใหม่
+  // จัดการอีเวนต์ Click ปุ่มต่างๆ (เพิ่ม, ลบ, ติ๊กชำระ)
   document.addEventListener("click", function(e){
     var btn = e.target.closest("[data-action]");
     if(!btn) return;
     var action = btn.getAttribute("data-action");
 
+    isTyping = false; // ปลดล็อคเมื่อมีการกดปุ่มคำสั่ง
+
     if(action === "toggle-cardx-link"){
       var lpath = btn.getAttribute("data-path"), lidx = +btn.getAttribute("data-idx");
-      var larr = getPath(state, lpath);
+      var larr = (function(obj, path){
+        var parts = path.split(".");
+        var cur = obj;
+        for(var i=0;i<parts.length;i++){ if(cur) cur = cur[parts[i]]; }
+        return cur;
+      })(state, lpath);
       var target = larr[lidx];
       target.cardXAuto = !target.cardXAuto;
       if(target.cardXAuto){
@@ -485,10 +478,20 @@
       }
     } else if(action === "remove-item"){
       var path = btn.getAttribute("data-path"), idx = +btn.getAttribute("data-idx");
-      getPath(state, path).splice(idx,1);
+      (function(obj, path){
+        var parts = path.split(".");
+        var cur = obj;
+        for(var i=0;i<parts.length;i++){ if(cur) cur = cur[parts[i]]; }
+        return cur;
+      })(state, path).splice(idx,1);
     } else if(action === "add-item"){
       var path2 = btn.getAttribute("data-path");
-      getPath(state, path2).push({id:uid(), name:"", amount:0});
+      (function(obj, path){
+        var parts = path.split(".");
+        var cur = obj;
+        for(var i=0;i<parts.length;i++){ if(cur) cur = cur[parts[i]]; }
+        return cur;
+      })(state, path2).push({id:uid(), name:"", amount:0});
     } else if(action === "toggle-month"){
       var c = state.cards[+btn.getAttribute("data-cidx")];
       var m = c.months[+btn.getAttribute("data-midx")];
