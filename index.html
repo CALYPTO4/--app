@@ -279,7 +279,7 @@
         'title="' + (isAuto ? 'ผูกกับยอดบัตรเครดิตอัตโนมัติอยู่ (คลิกเพื่อยกเลิก)' : 'ผูกรายการนี้กับยอดผ่อนบัตรเครดิตอัตโนมัติ') + '">' + ICONS.link + '</button>'
     ) : '';
     return '' +
-      '<div class="line-row' + (isAuto?' auto-row':'') + '">' +
+      '<div class="line-row' + (isAuto?' auto-row':'') + '" data-idx="' + idx + '">' +
         linkBtn +
         '<input class="name" data-bind="' + path + '.' + idx + '.name" value="' + esc(item.name) + '" placeholder="รายการ" />' +
         (isAuto ? '<span class="auto-badge">อัตโนมัติ</span>' : '') +
@@ -469,7 +469,6 @@
 
     save();
     
-    // บังคับเรนเดอร์ใหม่ทั้งหน้าทันทีเมื่อมีการเปลี่ยนแปลงโครงสร้างตัวเลขบัตรเครดิต เพื่อป้องกันปัญหามือถือจำค่าเก่า
     if(bind.indexOf("cards.") !== -1 || bind.indexOf("salary") !== -1 || bind.indexOf("ssoPercent") !== -1){
       render();
     } else {
@@ -485,16 +484,23 @@
       var cardEl = cardEls[pIdx];
       if(!cardEl) return;
 
+      // คำนวณค่าใช้จ่ายจาก input จริงในหน้าจอของงวดนั้นๆ
       var expInputs = cardEl.querySelectorAll(".section:nth-of-type(1) input.amount");
       var totalExp = 0;
-      expInputs.forEach(function(input){
-        totalExp += (parseFloat(input.value) || 0);
+      expInputs.forEach(function(input, idx){
+        var val = parseFloat(input.value) || 0;
+        totalExp += val;
+        // อัปเดตข้อมูลใน state ให้ตรงกันทันที
+        if(p.expenses[idx]) p.expenses[idx].amount = val;
       });
 
+      // คำนวณเงินลงทุนจาก input จริงในหน้าจอของงวดนั้นๆ
       var invInputs = cardEl.querySelectorAll(".section:nth-of-type(2) input.amount");
       var totalInv = 0;
-      invInputs.forEach(function(input){
-        totalInv += (parseFloat(input.value) || 0);
+      invInputs.forEach(function(input, idx){
+        var val = parseFloat(input.value) || 0;
+        totalInv += val;
+        if(p.investments[idx]) p.investments[idx].amount = val;
       });
 
       var incomeInput = cardEl.querySelector(".p-head .income input");
