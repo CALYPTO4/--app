@@ -460,13 +460,11 @@
       var cardEl = cardEls[pIdx];
       if(!cardEl) return;
 
-      // อ่านค่าจาก input ของแต่ละรายการในงวดนั้นๆ โดยตรงแบบสดๆ
       var expInputs = cardEl.querySelectorAll(".section:nth-of-type(1) input.amount");
       var totalExp = 0;
       expInputs.forEach(function(input, itemIdx){
         var val = parseFloat(input.value) || 0;
         totalExp += val;
-        // อัปเดตกลับเข้าสู่ state ด้วยเพื่อให้ข้อมูลตรงกัน
         if(p.expenses[itemIdx]){
           p.expenses[itemIdx].amount = val;
         }
@@ -488,7 +486,6 @@
 
       var remaining = income - totalExp - totalInv;
 
-      // อัปเดตตัวเลขผลรวมบนหน้าจอทันที
       var totalRows = cardEl.querySelectorAll(".total-row b");
       if(totalRows.length >= 2){
         totalRows[0].textContent = "฿" + thb(totalExp);
@@ -501,7 +498,6 @@
       }
     });
 
-    // อัปเดตสถิติด้านบนและบัตรเครดิต
     var netSalary = state.salary * (1 - state.ssoPercent/100);
     var totalOutstanding = state.cards.reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
     
