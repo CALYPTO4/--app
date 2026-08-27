@@ -212,14 +212,13 @@
   var saveTimer = null;
   var saveStatus = "";
   var isRemoteUpdating = false;
-  var isTyping = false; // ป้องกันไม่ให้รีเรนเดอร์ทับขณะผู้ใช้กำลังพิมพ์
 
   function initFirebaseSync(){
     saveStatus = "กำลังโหลด...";
     renderStatusOnly();
 
     dbRef.on("value", function(snapshot){
-      if(isTyping) return; // หากกำลังพิมพ์อยู่ ข้ามการซิงค์ชั่วคราว
+      if(isRemoteUpdating) return;
       var val = snapshot.val();
       if(val){
         state = val;
@@ -228,11 +227,7 @@
         state = defaultData();
         dbRef.set(state);
       }
-      isRemoteUpdating = true;
       render();
-      isRemoteUpdating = false;
-      saveStatus = "";
-      renderStatusOnly();
     }, function(err){
       saveStatus = "เชื่อมต่อฐานข้อมูลไม่สำเร็จ";
       renderStatusOnly();
@@ -240,17 +235,18 @@
   }
 
   function save(){
-    if(isRemoteUpdating) return;
     saveStatus = "กำลังบันทึก...";
     renderStatusOnly();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function(){
+      isRemoteUpdating = true;
       dbRef.set(state).then(function(){
-        isTyping = false; // ปลดล็อคเมื่อบันทึกเสร็จเรียบร้อย
+        isRemoteUpdating = false;
         saveStatus = "บันทึกแล้ว";
         renderStatusOnly();
         setTimeout(function(){ if(saveStatus==="บันทึกแล้ว"){ saveStatus=""; renderStatusOnly(); } }, 1500);
       }).catch(function(e){
+        isRemoteUpdating = false;
         saveStatus = "บันทึกไม่สำเร็จ";
         renderStatusOnly();
       });
@@ -262,18 +258,6 @@
     if(!el) return;
     el.className = "save-status" + (saveStatus==="บันทึกไม่สำเร็จ" || saveStatus.indexOf("ไม่สำเร็จ") !== -1 ? " err" : "");
     el.textContent = saveStatus;
-  }
-
-  // ระบบเข้าถึงและกำหนดค่าใน Object ตาม Path สตริงที่กำหนดได้อย่างแม่นยำ
-  function setNestedValue(obj, path, value){
-    var parts = path.split(".");
-    var curr = obj;
-    for(var i=0; i<parts.length-1; i++){
-      var p = parts[i];
-      if(!curr[p]) curr[p] = {};
-      curr = curr[p];
-    }
-    curr[parts[parts.length-1]] = value;
   }
 
   function cardStatus(c){
@@ -440,28 +424,43 @@
     renderStatusOnly();
   }
 
-  // จัดการอีเวนต์ Input แบบตรงไปตรงมาและล็อคสถานะการพิมพ์ไม่ให้รีเรนเดอร์ขัดจังหวะ
+  // ฟังก์ชันช่วยเซ็ตค่าลงใน Object ตาม Path เช่น "periods.0.expenses.1.name"
+  function setDeepValue(obj, path, val){
+    var parts = path.split(".");
+    var curr = obj;
+    for(var i=0; i<parts.length-1; i++){
+      var p = parts[i];
+      if(!curr[p]) return;
+      curr = curr[p];
+    }
+    curr[parts[parts.length-1]] = val;
+  }
+
+  // แก้ไขปัญหาหลัก: ใช้การดึงข้อมูลสดจาก DOM มารวมเข้า State ทันทีตอนพิมพ์ โดย "ไม่สั่ง render()" ซ้ำ
   document.addEventListener("input", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
 
-    isTyping = true; // ล็อคทันทีที่ผู้ใช้เริ่มพิมพ์ เพื่อไม่ให้ Firebase ดึงข้อมูลมาทับ
-
     var rawVal = el.value;
     var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
 
-    setNestedValue(state, bind, value);
+    // อัปเดตค่าลง state โดยตรง
+    if(bind === "salary" || bind === "ssoDeduction"){
+      state[bind] = value;
+    } else {
+      setDeepValue(state, bind, value);
+    }
+
+    // ทำการเซฟข้อมูลขึ้น Firebase เงียบๆ โดยไม่เรียก render() หน้าจอใหม่ขณะพิมพ์
     save();
   });
 
-  // จัดการอีเวนต์ Click ปุ่มต่างๆ (เพิ่ม, ลบ, ติ๊กชำระ)
+  // จัดการอีเวนต์ Click สำหรับปุ่มสั่งการต่างๆ (ซึ่งจำเป็นต้อง Render หน้าจอใหม่เฉพาะตอนกดปุ่ม)
   document.addEventListener("click", function(e){
     var btn = e.target.closest("[data-action]");
     if(!btn) return;
     var action = btn.getAttribute("data-action");
-
-    isTyping = false; // ปลดล็อคเมื่อมีการกดปุ่มคำสั่ง
 
     if(action === "toggle-cardx-link"){
       var lpath = btn.getAttribute("data-path"), lidx = +btn.getAttribute("data-idx");
