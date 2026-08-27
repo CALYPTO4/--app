@@ -12,7 +12,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 
-<title>สมุดบัญชีงบประมาณ (Realtime)</title>
+<title>สมุดบัญชีงบประมาณ (V.Final)</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <style>
@@ -134,7 +134,7 @@
   /* ตารางสรุปภาพรวม */
   .summary-table-card { background:#fff; border:1px solid #DEE0D5; border-radius:2px; margin-top: 24px; margin-bottom: 24px; box-shadow:0 1px 0 0 #DEE0D5; }
   .summary-table-head { padding: 12px 16px; background: #E8E4D6; border-bottom: 2px solid rgba(169,130,45,.5); font-family: 'Noto Serif Thai', serif; font-size: 15px; color: #1E293B; font-weight: 600; }
-  .summary-table-head.green-theme { background: #E3E7DA; border-bottom: 2px solid rgba(31,122,83,.4); }
+  .summary-table-head.green-theme { background: #E3E7DA; border-bottom: 2px solid rgba(31,122,83,.4); color: #1F7A53; }
   .summary-table-head.grand-theme { background: #1E293B; color: #F5F6F2; border-bottom: 2px solid rgba(169,130,45,.8); }
   .summary-table-body { padding: 0 16px; }
   .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #EEEFE9; font-size: 13px; }
@@ -170,7 +170,9 @@
     measurementId: "G-FK628F84KM"
   };
 
-  firebase.initializeApp(firebaseConfig);
+  if(!firebase.apps.length){
+    firebase.initializeApp(firebaseConfig);
+  }
   var dbRef = firebase.database().ref("budget_data");
 
   function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
@@ -248,7 +250,7 @@
   }
 
   function initFirebaseSync(){
-    saveStatus = "กำลังโหลด...";
+    saveStatus = "กำลังโหลดข้อมูลล่าสุด...";
     renderStatusOnly();
 
     dbRef.on("value", function(snapshot){
@@ -277,15 +279,15 @@
       isRemoteUpdating = true;
       dbRef.set(state).then(function(){
         isRemoteUpdating = false;
-        saveStatus = "บันทึกแล้ว";
+        saveStatus = "บันทึกเรียบร้อย";
         renderStatusOnly();
-        setTimeout(function(){ if(saveStatus==="บันทึกแล้ว"){ saveStatus=""; renderStatusOnly(); } }, 1500);
+        setTimeout(function(){ if(saveStatus==="บันทึกเรียบร้อย"){ saveStatus=""; renderStatusOnly(); } }, 1500);
       }).catch(function(e){
         isRemoteUpdating = false;
         saveStatus = "บันทึกไม่สำเร็จ";
         renderStatusOnly();
       });
-    }, 600);
+    }, 400);
   }
 
   function renderStatusOnly(){
@@ -386,7 +388,7 @@
   }
 
   function updateCombinedSummaryUI(computedCardX, netSalary){
-    // 1. ตารางสรุปค่าใช้จ่าย
+    // 1. สรุปค่าใช้จ่ายแยกตามรายการ
     var expContainer = document.getElementById("combined-summary-body");
     var expMap = {};
     var totalExpAll = 0;
@@ -415,7 +417,7 @@
       expContainer.innerHTML = html;
     }
 
-    // 2. ตารางสรุปเงินลงทุน (แยกจากค่าใช้จ่ายอย่างถูกต้อง)
+    // 2. สรุปเงินลงทุนแยกตามรายการ (แยกชัดเจนจากค่าใช้จ่าย)
     var invContainer = document.getElementById("combined-invest-body");
     var invMap = {};
     var totalInvAll = 0;
@@ -444,7 +446,7 @@
       invContainer.innerHTML = invHtml;
     }
 
-    // 3. ตารางสรุปยอดรวมเบ็ดเสร็จทั้งหมด
+    // 3. สรุปยอดรวมเบ็ดเสร็จทั้งหมด
     var grandContainer = document.getElementById("grand-summary-body");
     if(grandContainer){
       var grandRemaining = netSalary - totalExpAll - totalInvAll;
@@ -490,7 +492,7 @@
       '</div>' +
       '<div class="section">' +
         '<div class="section-title">' + ICONS.wallet + ' ค่าใช้จ่าย</div>' +
-        '<div class="link-hint">' + ICONS.link + ' สามารถพิมพ์แก้ไขตัวเลขเองได้ หรือคลิกไอคอนโซ่เพื่อผูกยอดกับบัตรเครดิตอัตโนมัติ</div>' +
+        '<div class="link-hint">' + ICONS.link + ' แก้ไขตัวเลขเองได้ หรือคลิกไอคอนโซ่เพื่อผูกยอดกับบัตรเครดิตอัตโนมัติ</div>' +
         rows +
         '<button class="add-line" data-action="add-item" data-path="' + expPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
         '<div class="total-row"><span>รวมผลรวมค่าใช้จ่าย ' + esc(p.label) + '</span><b class="mono" id="total-exp-' + pIdx + '">฿' + thb(t.exp) + '</b></div>' +
@@ -557,7 +559,6 @@
     var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
     var computedCardX = cardXPerPeriod(state);
 
-    // ประมวลผลข้อมูลสรุปครั้งแรก
     var expMap = {};
     var totalExpAll = 0;
     (state.periods || []).forEach(function(p){
@@ -613,7 +614,7 @@
 
     var html = '' +
     '<div class="cover"><div class="cover-inner">' +
-      '<div><div class="eyebrow">สมุดบัญชีรายรับ-รายจ่าย</div><h1 class="serif">งบประมาณรายเดือน</h1></div>' +
+      '<div><div class="eyebrow">สมุดบัญชีรายรับ-รายจ่าย (V.Final)</div><h1 class="serif">งบประมาณรายเดือน</h1></div>' +
       '<div class="stat-grid">' +
         '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" id="salary-input" data-bind="salary" value="' + state.salary + '" /></div></div>' +
         '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value">฿<input type="number" id="sso-input" data-bind="ssoDeduction" value="' + state.ssoDeduction + '" style="width:70px" /></div></div>' +
@@ -635,7 +636,7 @@
         '<div class="summary-table-body" id="combined-summary-body">' + combinedHtml + '</div>' +
       '</div>' +
 
-      /* ตารางสรุปเงินลงทุน */
+      /* ตารางสรุปเงินลงทุน (แยกอิสระ) */
       '<div class="summary-table-card">' +
         '<div class="summary-table-head green-theme">สรุปผลรวมเงินลงทุนทั้ง 2 งวด (แยกตามรายการ)</div>' +
         '<div class="summary-table-body" id="combined-invest-body">' + invHtml + '</div>' +
