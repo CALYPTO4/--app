@@ -12,7 +12,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 
-<title>สมุดบัญชีงบประมาณ (Realtime)</title>
+<title>สมุดบัญชีงบประมาณ (Realtime & Undo)</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <style>
@@ -41,8 +41,10 @@
   .eyebrow { font-size: 10px; letter-spacing: .25em; text-transform: uppercase; opacity: .55; margin-bottom: 4px; }
   h1 { font-size: 24px; margin: 0; line-height: 1.2; }
   .cover-top { display:flex; align-items:flex-start; justify-content:space-between; }
-  .reset-btn { display:flex; align-items:center; gap:4px; font-size:11px; opacity:.55; background:none; border:none; color:#1E293B; margin-top:4px; }
-  .reset-btn:hover { opacity: .9; }
+  .actions-group { display: flex; gap: 10px; align-items: center; }
+  .btn-action-top { display:flex; align-items:center; gap:4px; font-size:11px; opacity:.7; background:none; border:none; color:#1E293B; margin-top:4px; padding:2px 4px; }
+  .btn-action-top:hover:not(:disabled) { opacity: 1; }
+  .btn-action-top:disabled { opacity: 0.25; cursor: default; }
   .stat-grid { display:grid; grid-template-columns: repeat(2,1fr); gap:14px; margin-top:18px; }
   @media (min-width:560px){ .stat-grid{ grid-template-columns: repeat(4,1fr);} }
   .stat-label { font-size:10px; opacity:.55; margin-bottom:3px; }
@@ -166,6 +168,7 @@
     plus: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>',
     trash: '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>',
     reset: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>',
+    undo: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>',
     chevDown: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
     chevUp: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>',
     link: '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>'
@@ -209,9 +212,22 @@
   }
 
   var state = null;
+  var undoStack = [];
   var saveTimer = null;
   var saveStatus = "";
   var isRemoteUpdating = false;
+
+  function pushUndo(){
+    if(!state) return;
+    undoStack.push(JSON.parse(JSON.stringify(state)));
+    if(undoStack.length > 30) undoStack.shift(); // เก็บประวัติย้อนหลังสูงสุด 30 รายการ
+    updateUndoButtonState();
+  }
+
+  function updateUndoButtonState(){
+    var btn = document.getElementById("undo-btn");
+    if(btn) btn.disabled = undoStack.length === 0;
+  }
 
   function initFirebaseSync(){
     saveStatus = "กำลังโหลด...";
@@ -227,6 +243,7 @@
         state = defaultData();
         dbRef.set(state);
       }
+      undoStack = []; // รีเซ็ต stack เมื่อโหลดข้อมูลสดจาก cloud ครั้งแรก
       render();
     }, function(err){
       saveStatus = "เชื่อมต่อฐานข้อมูลไม่สำเร็จ";
@@ -298,24 +315,19 @@
     });
   }
 
-  // ฟังก์ชันคำนวณและอัปเดตตัวเลขรวมเฉพาะจุด (เรียลไทม์โดยไม่ต้องเรนเดอร์ทั้งหน้า)
   function liveUpdateTotals(){
     if(!state) return;
     var computedCardX = cardXPerPeriod(state);
 
-    // อัปเดตข้อมูลในแต่ละงวด
     (state.periods || []).forEach(function(p, pIdx){
       var t = periodTotals(p, computedCardX);
 
-      // อัปเดตรวมค่าใช้จ่าย
       var expEl = document.getElementById("total-exp-" + pIdx);
       if(expEl) expEl.textContent = "฿" + thb(t.exp);
 
-      // อัปเดตรวมเงินลงทุน
       var invEl = document.getElementById("total-inv-" + pIdx);
       if(invEl) invEl.textContent = "฿" + thb(t.inv);
 
-      // อัปเดตคงเหลือหลังหักทุกอย่าง
       var remEl = document.getElementById("remain-" + pIdx);
       if(remEl){
         remEl.textContent = "฿" + thb(t.remaining);
@@ -429,7 +441,10 @@
     '<div class="cover"><div class="cover-inner">' +
       '<div class="cover-top">' +
         '<div><div class="eyebrow">สมุดบัญชีรายรับ-รายจ่าย</div><h1 class="serif">งบประมาณรายเดือน</h1></div>' +
-        '<button class="reset-btn" data-action="reset">' + ICONS.reset + ' รีเซ็ต</button>' +
+        '<div class="actions-group">' +
+          '<button class="btn-action-top" id="undo-btn" data-action="undo" title="ย้อนกลับ">' + ICONS.undo + ' Undo</button>' +
+          '<button class="btn-action-top" data-action="reset">' + ICONS.reset + ' รีเซ็ต</button>' +
+        '</div>' +
       '</div>' +
       '<div class="stat-grid">' +
         '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" id="salary-input" data-bind="salary" value="' + state.salary + '" /></div></div>' +
@@ -448,6 +463,7 @@
 
     document.getElementById("app").innerHTML = html;
     renderStatusOnly();
+    updateUndoButtonState();
   }
 
   function setDeepValue(obj, path, val){
@@ -461,25 +477,35 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  // อัปเดตค่าลง State พร้อมคำนวณผลรวมใหม่ทันทีแบบ Realtime โดยที่เคอร์เซอร์ไม่หลุด
+  // ตัวแปรจับจังหวะการพิมพ์เพื่อบันทึก Undo แยกเป็นคำหรือประโยค
+  var typingTimer = null;
+
   document.addEventListener("input", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
+
+    // บันทึกสถานะก่อนเริ่มพิมพ์ (ถ้าเว้นช่วงพิมพ์เล็กน้อย) หากยังไม่มีใน stack ตอนเริ่มพิมพ์
+    if(!typingTimer){
+      pushUndo();
+    }
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(function(){
+      typingTimer = null;
+    }, 1200);
 
     var rawVal = el.value;
     var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
 
     if(bind === "salary" || bind === "ssoDeduction"){
       state[bind] = value;
-      var net = (Number(state.salary)||0) - (Number(state.ssoDzn) || Number(state.ssoDeduction)||0);
+      var net = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
       var netEl = document.getElementById("net-salary-val");
       if(netEl) netEl.textContent = "฿" + thb(net);
     } else {
       setDeepValue(state, bind, value);
     }
 
-    // เรียกฟังก์ชันคำนวณยอดรวมและช่องคงเหลือใหม่ทันทีขณะพิมพ์
     liveUpdateTotals();
     save();
   });
@@ -488,6 +514,17 @@
     var btn = e.target.closest("[data-action]");
     if(!btn) return;
     var action = btn.getAttribute("data-action");
+
+    if(action === "undo"){
+      if(undoStack.length === 0) return;
+      state = undoStack.pop();
+      save();
+      render();
+      return;
+    }
+
+    // ทุกครั้งที่มีการคลิกปุ่มกระทำใดๆ (เพิ่ม/ลบ) ให้บันทึกประวัติก่อนทำเสมอ
+    pushUndo();
 
     if(action === "toggle-cardx-link"){
       var lpath = btn.getAttribute("data-path"), lidx = +btn.getAttribute("data-idx");
@@ -513,7 +550,6 @@
     } else if(action === "add-item"){
       var path2 = btn.getAttribute("data-path");
       (function(obj, path){
-        var parts = path.path ? path.path : path.split("."); // Safe fallback
         var parts = path.split(".");
         var cur = obj;
         for(var i=0;i<parts.length;i++){ if(cur) cur = cur[parts[i]]; }
@@ -543,7 +579,10 @@
       state.cards.push({id:uid(), name:"บัตรใหม่", note:"", totalAmount:0, monthlyAmount:0, interest:"0%", open:true, months:[]});
     } else if(action === "reset"){
       if(confirm("ล้างข้อมูลทั้งหมดและเริ่มใหม่ตามค่าเริ่มต้น?")){ state = defaultData(); }
-      else return;
+      else {
+        undoStack.pop(); // ถ้ากดยกเลิกการรีเซ็ต ให้เอาสถานะที่ดันออกกลับมา
+        return;
+      }
     }
     
     save();
