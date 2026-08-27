@@ -132,7 +132,6 @@
   .ct-remain span:first-child { color:#5A5D51; }
   .ct-remain .val { font-size:16px; font-weight:600; color:#2A2E24; }
 
-  /* ตารางสรุปภาพรวม */
   .summary-table-card { background:#fff; border:1px solid #DEE0D5; border-radius:2px; margin-top: 24px; margin-bottom: 24px; box-shadow:0 1px 0 0 #DEE0D5; }
   .summary-table-head { padding: 12px 16px; background: #E8E4D6; border-bottom: 2px solid rgba(169,130,45,.5); font-family: 'Noto Serif Thai', serif; font-size: 15px; color: #1E293B; font-weight: 600; }
   .summary-table-head.green-theme { background: #E3E7DA; border-bottom: 2px solid rgba(31,122,83,.4); color: #1F7A53; }
@@ -156,7 +155,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app" style="min-height: 100vh;"></div>
 
 <script>
 (function(){
@@ -274,38 +273,54 @@
     return state.history[state.selectedMonth];
   }
 
-  function initFirebaseSync(){
-    saveStatus = "กำลังโหลดข้อมูลล่าสุด...";
-    renderStatusOnly();
+  function cardStatus(c){
+    if(!c || !c.months) return {paidCount:0, remaining:0, pct:0};
+    var paidCount = c.months.filter(function(m){return m.paid;}).length;
+    var paidAmount = paidCount * (Number(c.monthlyAmount)||0);
+    var remaining = Math.max((Number(c.totalAmount)||0) - paidAmount, 0);
+    var pct = c.months.length ? Math.round(paidCount/c.months.length*100) : 0;
+    return {paidCount:paidCount, remaining:remaining, pct:pct};
+  }
 
-    dbRef.on("value", function(snapshot){
-      if(isRemoteUpdating) return;
-      var val = snapshot.val();
-      if(val){
-        state = val;
-        // Migration สำหรับโครงสร้างเก่าที่ยังไม่มีระบบประวัติรายเดือน
-        if(!state.history){
-          var oldData = JSON.parse(JSON.stringify(state));
-          state = {
-            selectedMonth: "08/2569",
-            history: {
-              "08/2569": oldData
-            }
-          };
-        }
-        if(!state.selectedMonth) state.selectedMonth = "08/2569";
-        var cur = getCurrentMonthData();
-        migrateCardXAuto(cur);
-      } else {
-        state = defaultData();
-        dbRef.set(state);
-      }
-      undoStack = [];
-      render();
-    }, function(err){
-      saveStatus = "เชื่อมต่อฐานข้อมูลไม่สำเร็จ";
-      renderStatusOnly();
+  function activeCardMonthlySum(cur){
+    if(!cur || !cur.cards) return 0;
+    return cur.cards.reduce(function(s,c){
+      var st = cardStatus(c);
+      return s + (st.remaining > 0 ? (Number(c.monthlyAmount)||0) : 0);
+    }, 0);
+  }
+
+  function cardXPerPeriod(cur){
+    var n = (cur && cur.periods) ? cur.periods.length : 1;
+    return activeCardMonthlySum(cur) / (n || 1);
+  }
+
+  function effectiveAmount(item, computedCardX){
+    return item.cardXAuto ? computedCardX : (Number(item.amount)||0);
+  }
+
+  function periodTotals(p, computedCardX){
+    var exp = p.expenses ? p.expenses.reduce(function(s,i){return s+effectiveAmount(i, computedCardX);},0) : 0;
+    var inv = p.investments ? p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0) : 0;
+    return {exp:exp, inv:inv, remaining:(Number(p.income)||0) - exp - inv};
+  }
+
+  function migrateCardXAuto(cur){
+    if(!cur || !cur.periods) return;
+    cur.periods.forEach(function(p){
+      if(!p.expenses) return;
+      var hasAuto = p.expenses.some(function(i){ return i.cardXAuto; });
+      if(hasAuto) return;
+      var match = p.expenses.find(function(i){ return (i.name||"").trim().toLowerCase() === "cardx"; });
+      if(match) match.cardXAuto = true;
     });
+  }
+
+  function renderStatusOnly(){
+    var el = document.getElementById("save-status");
+    if(!el) return;
+    el.className = "save-status" + (saveStatus==="บันทึกไม่สำเร็จ" || saveStatus.indexOf("ไม่สำเร็จ") !== -1 ? " err" : "");
+    el.textContent = saveStatus;
   }
 
   function save(){
@@ -325,51 +340,6 @@
         renderStatusOnly();
       });
     }, 400);
-  }
-
-  function renderStatusOnly(){
-    var el = document.getElementById("save-status");
-    if(!el) return;
-    el.className = "save-status" + (saveStatus==="บันทึกไม่สำเร็จ" || saveStatus.indexOf("ไม่สำเร็จ") !== -1 ? " err" : "");
-    el.textContent = saveStatus;
-  }
-
-  function cardStatus(c){
-    if(!c || !c.months) return {paidCount:0, remaining:0, pct:0};
-    var paidCount = c.months.filter(function(m){return m.paid;}).length;
-    var paidAmount = paidCount * (Number(c.monthlyAmount)||0);
-    var remaining = Math.max((Number(c.totalAmount)||0) - paidAmount, 0);
-    var pct = c.months.length ? Math.round(paidCount/c.months.length*100) : 0;
-    return {paidCount:paidCount, remaining:remaining, pct:pct};
-  }
-  function activeCardMonthlySum(cur){
-    if(!cur || !cur.cards) return 0;
-    return cur.cards.reduce(function(s,c){
-      var st = cardStatus(c);
-      return s + (st.remaining > 0 ? (Number(c.monthlyAmount)||0) : 0);
-    }, 0);
-  }
-  function cardXPerPeriod(cur){
-    var n = (cur && cur.periods) ? cur.periods.length : 1;
-    return activeCardMonthlySum(cur) / (n || 1);
-  }
-  function effectiveAmount(item, computedCardX){
-    return item.cardXAuto ? computedCardX : (Number(item.amount)||0);
-  }
-  function periodTotals(p, computedCardX){
-    var exp = p.expenses ? p.expenses.reduce(function(s,i){return s+effectiveAmount(i, computedCardX);},0) : 0;
-    var inv = p.investments ? p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0) : 0;
-    return {exp:exp, inv:inv, remaining:(Number(p.income)||0) - exp - inv};
-  }
-  function migrateCardXAuto(cur){
-    if(!cur || !cur.periods) return;
-    cur.periods.forEach(function(p){
-      if(!p.expenses) return;
-      var hasAuto = p.expenses.some(function(i){ return i.cardXAuto; });
-      if(hasAuto) return;
-      var match = p.expenses.find(function(i){ return (i.name||"").trim().toLowerCase() === "cardx"; });
-      if(match) match.cardXAuto = true;
-    });
   }
 
   function liveUpdateTotals(){
@@ -437,7 +407,6 @@
     var cur = getCurrentMonthData();
     if(!cur) return;
 
-    // 1. สรุปค่าใช้จ่ายแยกตามรายการ
     var expContainer = document.getElementById("combined-summary-body");
     var expMap = {};
     var totalExpAll = 0;
@@ -466,7 +435,6 @@
       expContainer.innerHTML = html;
     }
 
-    // 2. สรุปเงินลงทุนแยกตามรายการ
     var invContainer = document.getElementById("combined-invest-body");
     var invMap = {};
     var totalInvAll = 0;
@@ -495,7 +463,6 @@
       invContainer.innerHTML = invHtml;
     }
 
-    // 3. สรุปยอดรวมเบ็ดเสร็จทั้งหมด
     var grandContainer = document.getElementById("grand-summary-body");
     if(grandContainer){
       var grandRemaining = totalNetIncome - totalExpAll - totalInvAll;
@@ -607,7 +574,6 @@
     var keys = Object.keys(state.history);
     if(keys.indexOf("08/2569") === -1) keys.push("08/2569");
     
-    // เรียงลำดับเดือน/ปี (เช่น 08/2569, 09/2569 ...)
     keys.sort(function(a,b){
       var pA = a.split("/");
       var pB = b.split("/");
@@ -687,19 +653,16 @@
     '<div class="wrap">' +
       '<div class="periods-grid" style="margin-top:20px;">' + periodsHtml + '</div>' +
 
-      // ตารางสรุปภาพรวมค่าใช้จ่าย
       '<div class="summary-table-card">' +
         '<div class="summary-table-head">📊 สรุปรายการค่าใช้จ่ายประจำเดือน ' + esc(state.selectedMonth) + ' (แยกตามประเภท)</div>' +
         '<div class="summary-table-body" id="combined-summary-body"></div>' +
       '</div>' +
 
-      // ตารางสรุปภาพรวมเงินลงทุน
       '<div class="summary-table-card">' +
         '<div class="summary-table-head green-theme">🌱 สรุปรายการเงินลงทุนประจำเดือน ' + esc(state.selectedMonth) + ' (แยกตามประเภท)</div>' +
         '<div class="summary-table-body" id="combined-invest-body"></div>' +
       '</div>' +
 
-      // ตารางสรุปยอดเบ็ดเสร็จสุทธิ
       '<div class="summary-table-card">' +
         '<div class="summary-table-head grand-theme">📌 สรุปยอดเงินสุทธิประจำเดือน ' + esc(state.selectedMonth) + '</div>' +
         '<div class="summary-table-body" id="grand-summary-body"></div>' +
@@ -727,7 +690,52 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  // Event Listeners สำหรับการเปลี่ยนแปลงข้อมูลแบบ Real-time
+  function initFirebaseSync(){
+    saveStatus = "กำลังโหลดข้อมูล...";
+    renderStatusOnly();
+
+    dbRef.once("value").then(function(snapshot){
+      var val = snapshot.val();
+      if(val){
+        state = val;
+        if(!state.history){
+          var oldData = JSON.parse(JSON.stringify(state));
+          state = {
+            selectedMonth: "08/2569",
+            history: { "08/2569": oldData }
+          };
+        }
+        if(!state.selectedMonth) state.selectedMonth = "08/2569";
+        var cur = getCurrentMonthData();
+        migrateCardXAuto(cur);
+      } else {
+        state = defaultData();
+        dbRef.set(state);
+      }
+      saveStatus = "";
+      render();
+
+      dbRef.on("value", function(snap){
+        if(isRemoteUpdating) return;
+        var rVal = snap.val();
+        if(rVal){
+          state = rVal;
+          if(!state.history){
+            var oldData = JSON.parse(JSON.stringify(state));
+            state = { selectedMonth: "08/2569", history: { "08/2569": oldData } };
+          }
+          if(!state.selectedMonth) state.selectedMonth = "08/2569";
+          render();
+        }
+      });
+
+    }).catch(function(err){
+      state = defaultData();
+      saveStatus = "";
+      render();
+    });
+  }
+
   document.addEventListener("input", function(e){
     var target = e.target;
     var bind = target.getAttribute("data-bind");
@@ -855,7 +863,7 @@
       }
     } else if(action === "add-new-month"){
       var monthsList = getAvailableMonths();
-      var lastMonth = monthsList[monthsList.length - 1]; // เช่น "08/2569"
+      var lastMonth = monthsList[monthsList.length - 1];
       var parts = lastMonth.split("/");
       var mNum = parseInt(parts[0]) + 1;
       var yNum = parseInt(parts[1]);
@@ -866,9 +874,7 @@
       var nextMonthStr = (mNum < 10 ? "0" + mNum : mNum) + "/" + yNum;
       
       if(!state.history[nextMonthStr]){
-        // ทำการโคลนข้อมูลจากเดือนล่าสุดมาเป็นตั้งต้นของเดือนใหม่เพื่อให้กรอกต่อง่ายขึ้น
         var clonedData = JSON.parse(JSON.stringify(cur));
-        // รีเซ็ตรายได้เสริมในเดือนใหม่เป็น 0 หรือคงค่าเดิมก็ได้ตามต้องการ
         clonedData.extraIncome = 0;
         clonedData.allowanceIncome = 0;
         state.history[nextMonthStr] = clonedData;
