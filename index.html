@@ -58,7 +58,7 @@
   .periods-grid { display:grid; grid-template-columns:1fr; gap:16px; }
   @media (min-width:700px){ .periods-grid{ grid-template-columns:1fr 1fr; } }
 
-  .card { background:#fff; border:1px solid #DEE0D5; border-radius:2px; overflow:hidden; box-shadow:0 1px 0 0 #DEE0D5; }
+  .card { background:#fff; border:1px solid #DEE0D5; border-radius:2px; overflow:hidden; box-shadow:0 1px 0 0 #DEE0D5; margin-bottom: 20px; }
   .p-head { display:flex; align-items:baseline; justify-content:space-between; padding:12px 16px; background:#E8E4D6; border-bottom:2px solid rgba(169,130,45,.5); flex-wrap:wrap; gap:6px; }
   .p-head .left { display:flex; align-items:baseline; gap:8px; }
   .p-head input.daylabel { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.25); outline:none; width:38px; font-size:11px; color:rgba(30,41,59,.65); }
@@ -87,13 +87,8 @@
   .auto-row input.name { color:#5A5D51; }
   .auto-badge { font-size:9px; color:#A9822D; background:rgba(169,130,45,.12); padding:1px 6px; border-radius:99px; flex-shrink:0; white-space:nowrap; }
   .line-row input.amount:disabled { opacity:.85; -webkit-text-fill-color:currentColor; }
-  .total-row { display:flex; justify-content:space-between; font-size:12.5px; color:#5A5D51; border-top:1px solid #EEEFE9; padding:7px 0 12px; }
-  .total-row b { font-weight:500; }
-  
-  /* แถบสรุปผลรวมประจำงวดแบบใหม่ ดีไซน์สะอาดตา */
-  .period-summary-box { background:#F3F4ED; border-top:2px solid #DEE0D5; padding:12px 16px; display:flex; flex-direction:column; gap:6px; font-size:12px; color:#5A5D51; }
-  .period-summary-row { display:flex; justify-content:space-between; align-items:center; }
-  .period-summary-row.grand { border-top:1px dashed #D2D4C8; padding-top:8px; margin-top:2px; font-size:13.5px; font-weight:600; color:#1E293B; }
+  .total-row { display:flex; justify-content:space-between; font-size:12.5px; color:#5A5D51; border-top:1px solid #EEEFE9; padding:8px 0 12px; font-weight:600; background:#FAFBF6; margin:0 -16px; padding-left:16px; padding-right:16px; }
+  .total-row b { font-weight:600; color:#B3261E; }
 
   .remain { padding:12px 16px; background:#E8E4D6; border-top:1px solid #DEE0D5; display:flex; align-items:center; justify-content:space-between; }
   .remain span:first-child { font-size:12px; font-weight:500; color:#1E293B; }
@@ -135,6 +130,15 @@
   .ct-remain { display:flex; align-items:center; justify-content:space-between; margin:14px 16px 16px; padding-top:10px; border-top:1px dashed #EEEFE9; font-size:12.5px; }
   .ct-remain span:first-child { color:#5A5D51; }
   .ct-remain .val { font-size:16px; font-weight:600; color:#2A2E24; }
+
+  /* ตารางสรุปภาพรวมรายรายการ */
+  .summary-table-card { background:#fff; border:1px solid #DEE0D5; border-radius:2px; margin-top: 24px; margin-bottom: 24px; box-shadow:0 1px 0 0 #DEE0D5; }
+  .summary-table-head { padding: 12px 16px; background: #E8E4D6; border-bottom: 2px solid rgba(169,130,45,.5); font-family: 'Noto Serif Thai', serif; font-size: 15px; color: #1E293B; font-weight: 600; }
+  .summary-table-body { padding: 0 16px; }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #EEEFE9; font-size: 13px; }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-row .s-name { color: #2A2E24; }
+  .summary-row .s-val { font-weight: 600; color: #B3261E; font-family: 'IBM Plex Mono', monospace; }
 
   .icon { display:inline-block; vertical-align:-2px; }
   .cards-list { display:flex; flex-direction:column; gap:16px; margin-bottom:20px; }
@@ -325,7 +329,6 @@
     });
   }
 
-  // อัปเดตตัวเลขทุกตัวบนหน้าจอแบบ Realtime ทันทีที่พิมพ์ โดยไม่ทำลาย DOM หรือทำให้เคอเซอร์หลุด
   function liveUpdateTotals(){
     if(!state) return;
 
@@ -368,28 +371,43 @@
       var invEl = document.getElementById("total-inv-" + pIdx);
       if(invEl) invEl.textContent = "฿" + thb(t.inv);
 
-      // อัปเดตแถบสรุปผลรวมท้ายงวด
-      var sumExpEl = document.getElementById("sum-exp-" + pIdx);
-      if(sumExpEl) sumExpEl.textContent = "฿" + thb(t.exp);
-
-      var sumInvEl = document.getElementById("sum-inv-" + pIdx);
-      if(sumInvEl) sumInvEl.textContent = "฿" + thb(t.inv);
-
-      var sumIncEl = document.getElementById("sum-inc-" + pIdx);
-      if(sumIncEl) sumIncEl.textContent = "฿" + thb(Number(p.income)||0);
-
-      var sumRemEl = document.getElementById("sum-rem-" + pIdx);
-      if(sumRemEl){
-        sumRemEl.textContent = "฿" + thb(t.remaining);
-        sumRemEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
-      }
-
       var remEl = document.getElementById("remain-" + pIdx);
       if(remEl){
         remEl.textContent = "฿" + thb(t.remaining);
         remEl.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
       }
     });
+
+    // อัปเดตตารางสรุปภาพรวมรายรายการแบบ Realtime
+    updateCombinedSummaryUI(computedCardX);
+  }
+
+  function updateCombinedSummaryUI(computedCardX){
+    var container = document.getElementById("combined-summary-body");
+    if(!container || !state || !state.periods) return;
+    
+    // รวมยอดค่าใช้จ่ายแต่ละรายการจากทุกงวด
+    var map = {};
+    state.periods.forEach(function(p){
+      if(!p.expenses) return;
+      p.expenses.forEach(function(item){
+        var key = (item.name || "ไม่มีชื่อ").trim();
+        if(!key) key = "ไม่มีชื่อ";
+        var amt = effectiveAmount(item, computedCardX);
+        map[key] = (map[key] || 0) + amt;
+      });
+    });
+
+    var html = "";
+    var keys = Object.keys(map);
+    if(keys.length === 0){
+      html = '<div style="padding:10px 0; color:#8A8D82; font-size:12px; text-align:center;">ยังไม่มีรายการค่าใช้จ่าย</div>';
+    } else {
+      keys.forEach(function(k){
+        html += '<div class="summary-row"><span class="s-name">' + esc(k) + '</span><span class="s-val">฿' + thb(map[k]) + '</span></div>';
+      });
+    }
+    container.innerHTML = html;
   }
 
   function renderLineRow(item, idx, path, accentClass, opts){
@@ -429,20 +447,13 @@
         '<div class="link-hint">' + ICONS.link + ' สามารถพิมพ์แก้ไขตัวเลขเองได้ หรือคลิกไอคอนโซ่เพื่อผูกยอดกับบัตรเครดิตอัตโนมัติ</div>' +
         rows +
         '<button class="add-line" data-action="add-item" data-path="' + expPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
-        '<div class="total-row"><span>รวมค่าใช้จ่าย</span><b class="mono" style="color:#B3261E" id="total-exp-' + pIdx + '">฿' + thb(t.exp) + '</b></div>' +
+        '<div class="total-row"><span>รวมผลรวมค่าใช้จ่าย ' + esc(p.label) + '</span><b class="mono" id="total-exp-' + pIdx + '">฿' + thb(t.exp) + '</b></div>' +
       '</div>' +
       '<div class="section" style="border-top:1px solid #EEEFE9">' +
         '<div class="section-title">' + ICONS.piggy + ' เงินลงทุน</div>' +
         invRows +
         '<button class="add-line" data-action="add-item" data-path="' + invPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
         '<div class="total-row"><span>รวมเงินลงทุน</span><b class="mono" style="color:#1F7A53" id="total-inv-' + pIdx + '">฿' + thb(t.inv) + '</b></div>' +
-      '</div>' +
-      /* แถบสรุปผลรวมภาพรวมประจำงวด */
-      '<div class="period-summary-box">' +
-        '<div class="period-summary-row"><span>รวมค่าใช้จ่ายทั้งหมด</span><b class="mono" style="color:#B3261E" id="sum-exp-' + pIdx + '">฿' + thb(t.exp) + '</b></div>' +
-        '<div class="period-summary-row"><span>รวมเงินลงทุนทั้งหมด</span><b class="mono" style="color:#1F7A53" id="sum-inv-' + pIdx + '">฿' + thb(t.inv) + '</b></div>' +
-        '<div class="period-summary-row"><span>เงินเข้างวดนี้</span><b class="mono" id="sum-inc-' + pIdx + '">฿' + thb(Number(p.income)||0) + '</b></div>' +
-        '<div class="period-summary-row grand"><span>คงเหลือสุทธิหลังหักทั้งหมด</span><b class="mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '" id="sum-rem-' + pIdx + '">฿' + thb(t.remaining) + '</b></div>' +
       '</div>' +
       '<div class="remain"><span>สรุปยอดคงเหลือของ ' + esc(p.label) + '</span><span class="val mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '" id="remain-' + pIdx + '">฿' + thb(t.remaining) + '</span></div>' +
     '</div>';
@@ -500,6 +511,28 @@
     var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
     var computedCardX = cardXPerPeriod(state);
 
+    // คำนวณข้อมูลรวมรายรายการสำหรับใส่ใน HTML ตอนเรนเดอร์ครั้งแรก
+    var combinedMap = {};
+    (state.periods || []).forEach(function(p){
+      if(!p.expenses) return;
+      p.expenses.forEach(function(item){
+        var key = (item.name || "ไม่มีชื่อ").trim();
+        if(!key) key = "ไม่มีชื่อ";
+        var amt = effectiveAmount(item, computedCardX);
+        combinedMap[key] = (combinedMap[key] || 0) + amt;
+      });
+    });
+
+    var combinedHtml = "";
+    var keys = Object.keys(combinedMap);
+    if(keys.length === 0){
+      combinedHtml = '<div style="padding:10px 0; color:#8A8D82; font-size:12px; text-align:center;">ยังไม่มีรายการค่าใช้จ่าย</div>';
+    } else {
+      keys.forEach(function(k){
+        combinedHtml += '<div class="summary-row"><span class="s-name">' + esc(k) + '</span><span class="s-val">฿' + thb(combinedMap[k]) + '</span></div>';
+      });
+    }
+
     var html = '' +
     '<div class="cover"><div class="cover-inner">' +
       '<div><div class="eyebrow">สมุดบัญชีรายรับ-รายจ่าย</div><h1 class="serif">งบประมาณรายเดือน</h1></div>' +
@@ -517,6 +550,13 @@
     '<div class="wrap">' +
       '<div id="save-status" class="save-status"></div>' +
       '<div class="periods-grid">' + (state.periods || []).map(function(p,i){ return renderPeriod(p, i, computedCardX); }).join("") + '</div>' +
+      
+      /* บล็อกหัวข้อใหม่: สรุปผลรวมค่าใช้จ่ายทั้ง 2 งวดแยกตามรายการ */
+      '<div class="summary-table-card">' +
+        '<div class="summary-table-head">สรุปผลรวมค่าใช้จ่ายทั้ง 2 งวด (แยกตามรายการ)</div>' +
+        '<div class="summary-table-body" id="combined-summary-body">' + combinedHtml + '</div>' +
+      '</div>' +
+
       '<div class="cards-header"><h2 class="sub serif">ผ่อนบัตรเครดิต</h2>' +
         '<button class="add-card-btn" data-action="add-card">' + ICONS.plus + ' เพิ่มบัตร</button></div>' +
       '<div class="cards-list">' + (state.cards || []).map(renderCard).join("") + '</div>' +
