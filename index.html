@@ -12,7 +12,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 
-<title>สมุดบัญชีงบประมาณ (Realtime & Undo)</title>
+<title>สมุดบัญชีงบประมาณ (Realtime Non-Blocking)</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <style>
@@ -319,8 +319,46 @@
     });
   }
 
+  // คำนวณและอัปเดตตัวเลขสรุปหน้าจอแบบ Realtime ทันทีที่พิมพ์โดยไม่ทำให้เคอเซอร์หลุด
   function liveUpdateTotals(){
     if(!state) return;
+    
+    // ดึงค่าสดๆ จากช่อง Input บนหน้าจอมาคำนวณทันที เพื่อความแม่นยำสูงสุดขณะพิมพ์
+    var salaryInput = document.getElementById("salary-input");
+    var ssoInput = document.getElementById("sso-input");
+    if(salaryInput) state.salary = salaryInput.value === "" ? 0 : parseFloat(salaryInput.value);
+    if(ssoInput) state.ssoDeduction = ssoInput.value === "" ? 0 : parseFloat(ssoInput.value);
+
+    // อัปเดตรายรับแต่ละงวดจาก input จริงบนหน้าจอ
+    (state.periods || []).forEach(function(p, pIdx){
+      var incInput = document.querySelector('input[data-bind="periods.' + pIdx + '.income"]');
+      if(incInput) p.income = incInput.value === "" ? 0 : parseFloat(incInput.value);
+
+      // อัปเดตค่าใช้จ่ายจาก input จริงบนหน้าจอ
+      if(p.expenses){
+        p.expenses.forEach(function(item, i){
+          if(item.cardXAuto) return;
+          var amtInput = document.querySelector('input[data-bind="periods.' + pIdx + '.expenses.' + i + '.amount"]');
+          if(amtInput) item.amount = amtInput.value === "" ? 0 : parseFloat(amtInput.value);
+        });
+      }
+      // อัปเดตเงินลงทุนจาก input จริงบนหน้าจอ
+      if(p.investments){
+        p.investments.forEach(function(item, i){
+          var amtInput = document.querySelector('input[data-bind="periods.' + pIdx + '.investments.' + i + '.amount"]');
+          if(amtInput) item.amount = amtInput.value === "" ? 0 : parseFloat(amtInput.value);
+        });
+      }
+    });
+
+    var netSalary = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
+    var netEl = document.getElementById("net-salary-val");
+    if(netEl) netEl.textContent = "฿" + thb(netSalary);
+
+    var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
+    var totalOutEl = document.getElementById("total-outstanding-val");
+    if(totalOutEl) totalOutEl.textContent = "฿" + thb(totalOutstanding);
+
     var computedCardX = cardXPerPeriod(state);
 
     (state.periods || []).forEach(function(p, pIdx){
@@ -448,7 +486,7 @@
         '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" id="salary-input" data-bind="salary" value="' + state.salary + '" /></div></div>' +
         '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value">฿<input type="number" id="sso-input" data-bind="ssoDeduction" value="' + state.ssoDeduction + '" style="width:70px" /></div></div>' +
         '<div><div class="stat-label">เงินเดือนสุทธิ</div><div class="stat-value mono" id="net-salary-val">฿' + thb(netSalary) + '</div></div>' +
-        '<div><div class="stat-label">บัตรเครดิตคงค้างรวม</div><div class="stat-value mono" style="color:#B3261E">฿' + thb(totalOutstanding) + '</div></div>' +
+        '<div><div class="stat-label">บัตรเครดิตคงค้างรวม</div><div class="stat-value mono" style="color:#B3261E" id="total-outstanding-val">฿' + thb(totalOutstanding) + '</div></div>' +
       '</div>' +
       '<div class="cover-actions">' +
         '<button class="btn-action-bottom" id="undo-btn" data-action="undo" title="ย้อนกลับ">' + ICONS.undo + ' Undo</button>' +
@@ -479,32 +517,29 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  var typingTimer = null;
-
+  // พิมพ์ปุ๊บ คำนวณสดทันทีแบบ Realtime โดยไม่รีเรนเดอร์หน้าจอใหม่ เคอเซอร์จึงไม่หลุด
   document.addEventListener("input", function(e){
     var el = e.target;
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
 
-    if(!typingTimer){
-      pushUndo();
-    }
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(function(){
-      typingTimer = null;
-    }, 1200);
-
     var rawVal = el.value;
     var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
-
-    // ทำงานเหมือนช่องอื่นๆ ทุกประการ แค่บันทึกลง state และอัปเดตตัวเลขสุทธิ (ไม่สั่ง render ซ้ำ)
     setDeepValue(state, bind, value);
 
-    if(bind === "salary" || bind === "ssoDeduction"){
-      var net = (Number(state.salary)||0) - (Number(state.ssoDeduction)||0);
-      var netEl = document.getElementById("net-salary-val");
-      if(netEl) netEl.textContent = "฿" + thb(net);
-    }
+    liveUpdateTotals();
+  });
+
+  // บันทึกข้อมูลลง Firebase เมื่อพิมพ์เสร็จหรือกดออกจากช่อง
+  document.addEventListener("change", function(e){
+    var el = e.target;
+    var bind = el.getAttribute && el.getAttribute("data-bind");
+    if(!bind) return;
+
+    pushUndo();
+    var rawVal = el.value;
+    var value = el.type === "number" ? (rawVal === "" ? 0 : parseFloat(rawVal)) : rawVal;
+    setDeepValue(state, bind, value);
 
     liveUpdateTotals();
     save();
