@@ -450,50 +450,66 @@
     var value = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
     setPath(state, bind, value);
     save();
-    
-    // อัปเดตการแสดงผลยอดรวมและเงินคงเหลือแบบเรียลไทม์ทันทีโดยไม่ต้องเรนเดอร์ใหม่ทั้งหน้า (ป้องกันการพิมพ์แล้วคีย์บอร์ดหลุด)
     updateLiveTotals();
   }
 
   function updateLiveTotals(){
-    var computedCardX = cardXPerPeriod(state);
+    var cardEls = document.querySelectorAll(".periods-grid .card");
+    
+    state.periods.forEach(function(p, pIdx){
+      var cardEl = cardEls[pIdx];
+      if(!cardEl) return;
+
+      // อ่านค่าจาก input ของแต่ละรายการในงวดนั้นๆ โดยตรงแบบสดๆ
+      var expInputs = cardEl.querySelectorAll(".section:nth-of-type(1) input.amount");
+      var totalExp = 0;
+      expInputs.forEach(function(input, itemIdx){
+        var val = parseFloat(input.value) || 0;
+        totalExp += val;
+        // อัปเดตกลับเข้าสู่ state ด้วยเพื่อให้ข้อมูลตรงกัน
+        if(p.expenses[itemIdx]){
+          p.expenses[itemIdx].amount = val;
+        }
+      });
+
+      var invInputs = cardEl.querySelectorAll(".section:nth-of-type(2) input.amount");
+      var totalInv = 0;
+      invInputs.forEach(function(input, itemIdx){
+        var val = parseFloat(input.value) || 0;
+        totalInv += val;
+        if(p.investments[itemIdx]){
+          p.investments[itemIdx].amount = val;
+        }
+      });
+
+      var incomeInput = cardEl.querySelector(".p-head .income input");
+      var income = incomeInput ? (parseFloat(incomeInput.value) || 0) : p.income;
+      p.income = income;
+
+      var remaining = income - totalExp - totalInv;
+
+      // อัปเดตตัวเลขผลรวมบนหน้าจอทันที
+      var totalRows = cardEl.querySelectorAll(".total-row b");
+      if(totalRows.length >= 2){
+        totalRows[0].textContent = "฿" + thb(totalExp);
+        totalRows[1].textContent = "฿" + thb(totalInv);
+      }
+      var remainVal = cardEl.querySelector(".remain .val");
+      if(remainVal){
+        remainVal.textContent = "฿" + thb(remaining);
+        remainVal.style.color = remaining < 0 ? "#B3261E" : "#1E293B";
+      }
+    });
+
+    // อัปเดตสถิติด้านบนและบัตรเครดิต
     var netSalary = state.salary * (1 - state.ssoPercent/100);
     var totalOutstanding = state.cards.reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
     
-    // อัปเดตตัวเลขสรุปด้านบน
     var statValues = document.querySelectorAll(".stat-value.mono");
     if(statValues.length >= 2){
       statValues[0].textContent = "฿" + thb(netSalary);
       statValues[1].textContent = "฿" + thb(totalOutstanding);
     }
-
-    // อัปเดตแต่ละงวด
-    state.periods.forEach(function(p, pIdx){
-      var t = periodTotals(p, computedCardX);
-      var cardEls = document.querySelectorAll(".periods-grid .card");
-      if(cardEls[pIdx]){
-        var totalRows = cardEls[pIdx].querySelectorAll(".total-row b");
-        if(totalRows.length >= 2){
-          totalRows[0].textContent = "฿" + thb(t.exp);
-          totalRows[1].textContent = "฿" + thb(t.inv);
-        }
-        var remainVal = cardEls[pIdx].querySelector(".remain .val");
-        if(remainVal){
-          remainVal.textContent = "฿" + thb(t.remaining);
-          remainVal.style.color = t.remaining < 0 ? "#B3261E" : "#1E293B";
-        }
-      }
-    });
-
-    // อัปเดตยอดคงเหลือของบัตรเครดิต
-    state.cards.forEach(function(c, cIdx){
-      var st = cardStatus(c);
-      var cardListEls = document.querySelectorAll(".cards-list .card");
-      if(cardListEls[cIdx]){
-        var ctRemain = cardListEls[cIdx].querySelector(".ct-remain .val");
-        if(ctRemain){ ctRemain.textContent = "฿" + thb(st.remaining); }
-      }
-    });
   }
 
   document.addEventListener("click", handleClick);
