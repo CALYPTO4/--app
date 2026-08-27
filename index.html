@@ -319,7 +319,7 @@
     });
   }
 
-  // คำนวณและอัปเดตตัวเลขทุกตัวบนหน้าจอแบบ Realtime ทันทีที่พิมพ์ โดยไม่ทำลาย DOM หรือทำให้เคอเซอร์หลุด
+  // อัปเดตตัวเลขทุกตัวบนหน้าจอแบบ Realtime ทันทีที่พิมพ์ โดยไม่ทำลาย DOM หรือทำให้เคอเซอร์หลุด
   function liveUpdateTotals(){
     if(!state) return;
 
@@ -337,6 +337,17 @@
     var totalOutstanding = (state.cards || []).reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
     var totalOutEl = document.getElementById("total-outstanding-val");
     if(totalOutEl) totalOutEl.textContent = "฿" + thb(totalOutstanding);
+
+    // ถ้ามีการเปลี่ยนเงินเดือนหรือประกันสังคม ให้คำนวณเงินเข้างวดให้อัตโนมัติ (หาร 2 จากสุทธิ)
+    var numPeriods = (state.periods || []).length || 1;
+    var perPeriodIncome = netSalary / numPeriods;
+    (state.periods || []).forEach(function(p, pIdx){
+      p.income = perPeriodIncome;
+      var incInput = document.querySelector('input[data-bind="periods.' + pIdx + '.income"]');
+      if(incInput && document.activeElement !== incInput){
+        incInput.value = perPeriodIncome;
+      }
+    });
 
     var computedCardX = cardXPerPeriod(state);
 
