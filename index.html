@@ -40,16 +40,19 @@
   .cover-inner { max-width: 880px; margin: 0 auto; }
   .eyebrow { font-size: 10px; letter-spacing: .25em; text-transform: uppercase; opacity: .55; margin-bottom: 4px; }
   h1 { font-size: 24px; margin: 0; line-height: 1.2; }
-  .cover-top { display:flex; align-items:flex-start; justify-content:space-between; }
-  .actions-group { display: flex; gap: 10px; align-items: center; }
-  .btn-action-top { display:flex; align-items:center; gap:4px; font-size:11px; opacity:.7; background:none; border:none; color:#1E293B; margin-top:4px; padding:2px 4px; }
-  .btn-action-top:hover:not(:disabled) { opacity: 1; }
-  .btn-action-top:disabled { opacity: 0.25; cursor: default; }
+  
   .stat-grid { display:grid; grid-template-columns: repeat(2,1fr); gap:14px; margin-top:18px; }
   @media (min-width:560px){ .stat-grid{ grid-template-columns: repeat(4,1fr);} }
   .stat-label { font-size:10px; opacity:.55; margin-bottom:3px; }
   .stat-value { font-size:18px; font-weight:500; }
   .stat-value input { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.3); outline:none; font-size:18px; font-weight:500; color:#1E293B; width:90px; }
+
+  /* แถบปุ่มควบคุมด้านล่างการ์ดสรุป */
+  .cover-actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(30,41,59,.12); }
+  .btn-action-bottom { display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; background:rgba(30,41,59,.08); border:1px solid rgba(30,41,59,.15); border-radius:3px; color:#1E293B; padding:5px 12px; }
+  .btn-action-bottom:hover:not(:disabled) { background:rgba(30,41,59,.15); }
+  .btn-action-bottom:disabled { opacity: 0.3; cursor: default; }
+
   .save-status { font-size:11px; color:#8A8D82; height:16px; margin: 14px 0 6px; }
   .save-status.err { color:#B3261E; }
 
@@ -220,7 +223,7 @@
   function pushUndo(){
     if(!state) return;
     undoStack.push(JSON.parse(JSON.stringify(state)));
-    if(undoStack.length > 30) undoStack.shift(); // เก็บประวัติย้อนหลังสูงสุด 30 รายการ
+    if(undoStack.length > 30) undoStack.shift();
     updateUndoButtonState();
   }
 
@@ -243,7 +246,7 @@
         state = defaultData();
         dbRef.set(state);
       }
-      undoStack = []; // รีเซ็ต stack เมื่อโหลดข้อมูลสดจาก cloud ครั้งแรก
+      undoStack = [];
       render();
     }, function(err){
       saveStatus = "เชื่อมต่อฐานข้อมูลไม่สำเร็จ";
@@ -439,18 +442,16 @@
 
     var html = '' +
     '<div class="cover"><div class="cover-inner">' +
-      '<div class="cover-top">' +
-        '<div><div class="eyebrow">สมุดบัญชีรายรับ-รายจ่าย</div><h1 class="serif">งบประมาณรายเดือน</h1></div>' +
-        '<div class="actions-group">' +
-          '<button class="btn-action-top" id="undo-btn" data-action="undo" title="ย้อนกลับ">' + ICONS.undo + ' Undo</button>' +
-          '<button class="btn-action-top" data-action="reset">' + ICONS.reset + ' รีเซ็ต</button>' +
-        '</div>' +
-      '</div>' +
+      '<div><div class="eyebrow">สมุดบัญชีรายรับ-รายจ่าย</div><h1 class="serif">งบประมาณรายเดือน</h1></div>' +
       '<div class="stat-grid">' +
         '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" id="salary-input" data-bind="salary" value="' + state.salary + '" /></div></div>' +
         '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value">฿<input type="number" id="sso-input" data-bind="ssoDeduction" value="' + state.ssoDeduction + '" style="width:70px" /></div></div>' +
         '<div><div class="stat-label">เงินเดือนสุทธิ</div><div class="stat-value mono" id="net-salary-val">฿' + thb(netSalary) + '</div></div>' +
         '<div><div class="stat-label">บัตรเครดิตคงค้างรวม</div><div class="stat-value mono" style="color:#B3261E">฿' + thb(totalOutstanding) + '</div></div>' +
+      '</div>' +
+      '<div class="cover-actions">' +
+        '<button class="btn-action-bottom" id="undo-btn" data-action="undo" title="ย้อนกลับ">' + ICONS.undo + ' Undo</button>' +
+        '<button class="btn-action-bottom" data-action="reset">' + ICONS.reset + ' รีเซ็ต</button>' +
       '</div>' +
     '</div></div>' +
     '<div class="wrap">' +
@@ -477,7 +478,6 @@
     curr[parts[parts.length-1]] = val;
   }
 
-  // ตัวแปรจับจังหวะการพิมพ์เพื่อบันทึก Undo แยกเป็นคำหรือประโยค
   var typingTimer = null;
 
   document.addEventListener("input", function(e){
@@ -485,7 +485,6 @@
     var bind = el.getAttribute && el.getAttribute("data-bind");
     if(!bind) return;
 
-    // บันทึกสถานะก่อนเริ่มพิมพ์ (ถ้าเว้นช่วงพิมพ์เล็กน้อย) หากยังไม่มีใน stack ตอนเริ่มพิมพ์
     if(!typingTimer){
       pushUndo();
     }
@@ -523,7 +522,6 @@
       return;
     }
 
-    // ทุกครั้งที่มีการคลิกปุ่มกระทำใดๆ (เพิ่ม/ลบ) ให้บันทึกประวัติก่อนทำเสมอ
     pushUndo();
 
     if(action === "toggle-cardx-link"){
@@ -580,7 +578,7 @@
     } else if(action === "reset"){
       if(confirm("ล้างข้อมูลทั้งหมดและเริ่มใหม่ตามค่าเริ่มต้น?")){ state = defaultData(); }
       else {
-        undoStack.pop(); // ถ้ากดยกเลิกการรีเซ็ต ให้เอาสถานะที่ดันออกกลับมา
+        undoStack.pop();
         return;
       }
     }
