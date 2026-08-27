@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="งบประมาณ" />
+<meta name="theme-color" content="#F5F6F2" />
+<title>สมุดบัญชีงบประมาณ</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #F5F6F2; }
+  body {
+    font-family: 'Noto Sans Thai', sans-serif;
+    color: #2A2E24;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .serif { font-family: 'Noto Serif Thai', serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  input { font-family: inherit; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  button { font-family: inherit; cursor: pointer; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px 40px; }
+  .cover {
+    background: #E8E4D6; color: #1E293B; border-bottom: 2px solid rgba(169,130,45,.5);
+    padding: 22px 16px 18px;
+  }
+  .cover-inner { max-width: 880px; margin: 0 auto; }
+  .eyebrow { font-size: 10px; letter-spacing: .25em; text-transform: uppercase; opacity: .55; margin-bottom: 4px; }
+  h1 { font-size: 24px; margin: 0; line-height: 1.2; }
+  .cover-top { display:flex; align-items:flex-start; justify-content:space-between; }
+  .reset-btn { display:flex; align-items:center; gap:4px; font-size:11px; opacity:.55; background:none; border:none; color:#1E293B; margin-top:4px; }
+  .reset-btn:hover { opacity: .9; }
+  .stat-grid { display:grid; grid-template-columns: repeat(2,1fr); gap:14px; margin-top:18px; }
+  @media (min-width:560px){ .stat-grid{ grid-template-columns: repeat(4,1fr);} }
+  .stat-label { font-size:10px; opacity:.55; margin-bottom:3px; }
+  .stat-value { font-size:18px; font-weight:500; }
+  .stat-value input { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.3); outline:none; font-size:18px; font-weight:500; color:#1E293B; width:80px; }
+  .save-status { font-size:11px; color:#8A8D82; height:16px; margin: 14px 0 6px; }
+  .save-status.err { color:#B3261E; }
+
+  .periods-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+  @media (min-width:700px){ .periods-grid{ grid-template-columns:1fr 1fr; } }
+
+  .card { background:#fff; border:1px solid #DEE0D5; border-radius:2px; overflow:hidden; box-shadow:0 1px 0 0 #DEE0D5; }
+  .p-head { display:flex; align-items:baseline; justify-content:space-between; padding:12px 16px; background:#E8E4D6; border-bottom:2px solid rgba(169,130,45,.5); flex-wrap:wrap; gap:6px; }
+  .p-head .left { display:flex; align-items:baseline; gap:8px; }
+  .p-head input.daylabel { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.25); outline:none; width:38px; font-size:11px; color:rgba(30,41,59,.65); }
+  .p-head .income { display:flex; align-items:center; gap:4px; font-size:11px; color:rgba(30,41,59,.65); }
+  .p-head .income input { width:76px; background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.25); outline:none; text-align:right; color:#1E293B; font-size:13px; }
+
+  .section { padding: 12px 16px 0; }
+  .section-title { display:flex; align-items:center; gap:6px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8A8D82; margin-bottom:4px; }
+  .line-row { display:flex; align-items:center; gap:8px; padding:6px 0; }
+  .line-row input.name { flex:1; min-width:0; background:transparent; border:none; border-bottom:1px dotted #C7CABF; outline:none; font-size:13.5px; color:#2A2E24; padding-bottom:2px; }
+  .line-row input.name:focus { border-bottom:1px solid #1E293B; }
+  .line-row .amt { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  .line-row .amt span { font-size:12px; color:#8A8D82; }
+  .line-row input.amount { width:88px; background:transparent; border:none; outline:none; text-align:right; font-size:13.5px; font-weight:500; }
+  .line-row input.amount.red { color:#B3261E; }
+  .line-row input.amount.green { color:#1F7A53; }
+  .line-row .rm { background:none; border:none; color:#B4B7A9; padding:2px; flex-shrink:0; }
+  .line-row .rm:hover { color:#B3261E; }
+  .add-line { display:flex; align-items:center; gap:4px; background:none; border:none; font-size:11px; color:#8A8D82; margin:2px 0 8px; padding:0; }
+  .add-line:hover { color:#1E293B; }
+  .link-hint { font-size:10.5px; color:#A6A99D; display:flex; align-items:center; gap:5px; margin:-2px 0 8px; line-height:1.4; }
+  .link-btn { background:none; border:none; color:#C7CABF; padding:2px; flex-shrink:0; }
+  .link-btn:hover { color:#8A8D82; }
+  .link-btn.on { color:#A9822D; }
+  .auto-row { background:rgba(169,130,45,.06); border-radius:3px; margin:2px -6px; padding-left:6px; padding-right:6px; }
+  .auto-row input.name { color:#5A5D51; }
+  .auto-badge { font-size:9px; color:#A9822D; background:rgba(169,130,45,.12); padding:1px 6px; border-radius:99px; flex-shrink:0; white-space:nowrap; }
+  .line-row input.amount:disabled { opacity:.85; -webkit-text-fill-color:currentColor; }
+  .total-row { display:flex; justify-content:space-between; font-size:12.5px; color:#5A5D51; border-top:1px solid #EEEFE9; padding:7px 0 12px; }
+  .total-row b { font-weight:500; }
+  .remain { padding:12px 16px; background:#F5F6F2; border-top:1px solid #DEE0D5; display:flex; align-items:center; justify-content:space-between; }
+  .remain span:first-child { font-size:12px; color:#5A5D51; }
+  .remain .val { font-size:16px; font-weight:600; }
+
+  h2.sub { font-family:'Noto Serif Thai',serif; font-size:18px; color:#1E293B; margin:0; }
+  .cards-header { display:flex; align-items:center; justify-content:space-between; margin:28px 0 10px; }
+  .add-card-btn { display:flex; align-items:center; gap:4px; font-size:12px; color:#5A5D51; border:1px solid #DEE0D5; border-radius:2px; padding:5px 10px; background:#fff; }
+  .add-card-btn:hover { color:#1E293B; }
+
+  .ct-head { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#E3E7DA; border-bottom:2px solid rgba(31,122,83,.4); gap:8px; }
+  .ct-head .left { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+  .ct-head input.cname { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.3); outline:none; font-family:'Noto Serif Thai',serif; font-size:14.5px; width:90px; color:#1E293B; }
+  .ct-head input.cnote { background:transparent; border:none; border-bottom:1px dotted rgba(30,41,59,.25); outline:none; font-size:11px; width:76px; color:rgba(30,41,59,.6); }
+  .ct-head .interest { font-size:10px; color:rgba(30,41,59,.5); }
+  .ct-head .toggle { background:none; border:none; color:rgba(30,41,59,.6); padding:2px; }
+  .ct-sum { display:flex; flex-wrap:wrap; gap:16px; padding:10px 16px; font-size:11.5px; color:#5A5D51; border-bottom:1px solid #EEEFE9; align-items:center; }
+  .ct-sum b { color:#2A2E24; }
+  .ct-sum input { width:64px; background:transparent; border:none; border-bottom:1px dotted #C7CABF; outline:none; color:#2A2E24; }
+  .ct-sum .rmcard { margin-left:auto; background:none; border:none; color:#B4B7A9; display:flex; align-items:center; gap:4px; font-size:11.5px; }
+  .ct-sum .rmcard:hover { color:#B3261E; }
+  .progress-wrap { padding:12px 16px 2px; }
+  .progress-labels { display:flex; justify-content:space-between; font-size:11px; color:#8A8D82; margin-bottom:6px; }
+  .progress-bar { height:6px; border-radius:99px; background:#EEEFE9; overflow:hidden; }
+  .progress-fill { height:100%; background:#B3261E; transition:width .3s; }
+  .stamps { display:flex; flex-wrap:wrap; gap:12px; padding:14px 16px 4px; }
+  .stamp-wrap { position:relative; }
+  .stamp { display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none; }
+  .stamp .circle { width:44px; height:44px; border-radius:50%; border:2px solid #C7CABF; display:flex; align-items:center; justify-content:center; font-size:11px; color:#8A8D82; background:#fff; font-family:'IBM Plex Mono',monospace; }
+  .stamp .circle.paid { border-color:#B3261E; color:#B3261E; background:rgba(179,38,30,.05); transform:rotate(-8deg); box-shadow:0 0 0 1.5px rgba(179,38,30,.25); }
+  .stamp .cap { font-size:9px; letter-spacing:.02em; color:#A6A99D; }
+  .stamp .cap.paid { color:#B3261E; }
+  .stamp-rm { position:absolute; top:-4px; right:-4px; background:#fff; border:1px solid #DEE0D5; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; color:#B4B7A9; font-size:10px; line-height:1; }
+  .stamp-rm:hover { color:#B3261E; }
+  .add-month { display:flex; flex-direction:column; align-items:center; gap:3px; justify-content:center; }
+  .add-month input { height:44px; width:44px; border-radius:50%; border:2px dashed #C7CABF; text-align:center; font-size:10px; outline:none; }
+  .add-month input:focus { border-color:rgba(30,41,59,.5); }
+  .add-month button { background:none; border:none; font-size:9px; color:#8A8D82; }
+  .ct-remain { display:flex; align-items:center; justify-content:space-between; margin:14px 16px 16px; padding-top:10px; border-top:1px dashed #EEEFE9; font-size:12.5px; }
+  .ct-remain span:first-child { color:#5A5D51; }
+  .ct-remain .val { font-size:16px; font-weight:600; color:#2A2E24; }
+
+  .icon { display:inline-block; vertical-align:-2px; }
+  .cards-list { display:flex; flex-direction:column; gap:16px; margin-bottom:20px; }
+  .install-tip { max-width:880px; margin:0 auto; padding:10px 16px 0; font-size:11.5px; color:#8A8D82; }
+</style>
+</head>
+<body>
+  <div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+  var STORAGE_KEY = "budget-passbook-standalone-v1";
+
+  function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+  function thb(n){ n = isFinite(n) ? n : 0; return n.toLocaleString("th-TH",{minimumFractionDigits:0,maximumFractionDigits:2}); }
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+
+  var ICONS = {
+    wallet: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>',
+    piggy: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h3v-2h3v2h3v-2.3c1.5-.5 2.5-1.5 3-3H21a1 1 0 0 0 1-1v-3l-3-1V5Z"/></svg>',
+    card: '<svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
+    plus: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>',
+    trash: '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>',
+    reset: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>',
+    chevDown: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
+    chevUp: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>',
+    link: '<svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>'
+  };
+
+  function expenseSet(){
+    return [
+      {id:uid(),name:"แม่",amount:2000},
+      {id:uid(),name:"เบี้ยประกันรถ",amount:392},
+      {id:uid(),name:"ทรู",amount:755},
+      {id:uid(),name:"YT & APM",amount:159},
+      {id:uid(),name:"CardX",amount:3689,cardXAuto:true},
+      {id:uid(),name:"ประกันอุบัติเหตุ",amount:315},
+      {id:uid(),name:"ประกันอุบัติเหตุ",amount:320}
+    ];
+  }
+  function investSet(){
+    return [ {id:uid(),name:"กองทุน",amount:1000}, {id:uid(),name:"ETF",amount:1250} ];
+  }
+  function monthsFrom(labels, paidCount){
+    return labels.map(function(l,i){ return {id:uid(), label:l, paid:i<paidCount}; });
+  }
+
+  function defaultData(){
+    return {
+      salary: 31450,
+      ssoPercent: 5,
+      periods: [
+        {id:uid(), label:"งวดที่ 1", dayLabel:"D5", income:14938.75, open:true, expenses:expenseSet(), investments:investSet()},
+        {id:uid(), label:"งวดที่ 2", dayLabel:"D20", income:14938.75, open:true, expenses:expenseSet(), investments:investSet()}
+      ],
+      cards: [
+        {id:uid(), name:"CardX", note:"ผ่อนหลัก", totalAmount:38600, monthlyAmount:3860, interest:"16%", open:true,
+          months: monthsFrom(["4/26","5/26","6/26","7/26","8/26","9/26","10/26","11/26","12/26","1/27"], 4)},
+        {id:uid(), name:"CardX", note:"Oppo", totalAmount:10000, monthlyAmount:1000, interest:"0%", open:true,
+          months: monthsFrom(["7/26","8/26","9/26","10/26","11/26","12/26","1/27","2/27","3/27","4/27"], 1)},
+        {id:uid(), name:"CardX", note:"หัวหิน", totalAmount:10068, monthlyAmount:2517, interest:"0%", open:true,
+          months: monthsFrom(["8/26","9/26","10/26","11/26"], 0)}
+      ]
+    };
+  }
+
+  var state = null;
+  var saveTimer = null;
+  var saveStatus = "";
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ state = JSON.parse(raw); migrateCardXAuto(state); return; }
+    }catch(e){}
+    state = defaultData();
+  }
+  function save(){
+    saveStatus = "saving";
+    renderStatusOnly();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        saveStatus = "saved";
+      }catch(e){ saveStatus = "error"; }
+      renderStatusOnly();
+    }, 250);
+  }
+  function renderStatusOnly(){
+    var el = document.getElementById("save-status");
+    if(!el) return;
+    el.className = "save-status" + (saveStatus==="error" ? " err" : "");
+    el.textContent = saveStatus==="saving" ? "กำลังบันทึก..." : saveStatus==="saved" ? "บันทึกแล้ว" : saveStatus==="error" ? "บันทึกไม่สำเร็จ (พื้นที่จัดเก็บเต็มหรือถูกบล็อก)" : "";
+  }
+
+  function getPath(obj, path){
+    var parts = path.split(".");
+    var cur = obj;
+    for(var i=0;i<parts.length;i++){ cur = cur[parts[i]]; }
+    return cur;
+  }
+  function setPath(obj, path, value){
+    var parts = path.split(".");
+    var cur = obj;
+    for(var i=0;i<parts.length-1;i++){ cur = cur[parts[i]]; }
+    cur[parts[parts.length-1]] = value;
+  }
+
+  function cardStatus(c){
+    var paidCount = c.months.filter(function(m){return m.paid;}).length;
+    var paidAmount = paidCount * (Number(c.monthlyAmount)||0);
+    var remaining = Math.max((Number(c.totalAmount)||0) - paidAmount, 0);
+    var pct = c.months.length ? Math.round(paidCount/c.months.length*100) : 0;
+    return {paidCount:paidCount, remaining:remaining, pct:pct};
+  }
+  // Sum of monthly installments for cards that are NOT fully paid off yet.
+  // As a card's stamps reach the end (remaining hits 0), it drops out of this sum automatically.
+  function activeCardMonthlySum(state){
+    return state.cards.reduce(function(s,c){
+      var st = cardStatus(c);
+      return s + (st.remaining > 0 ? (Number(c.monthlyAmount)||0) : 0);
+    }, 0);
+  }
+  function cardXPerPeriod(state){
+    var n = state.periods.length || 1;
+    return activeCardMonthlySum(state) / n;
+  }
+  function effectiveAmount(item, computedCardX){
+    return item.cardXAuto ? computedCardX : (Number(item.amount)||0);
+  }
+  function periodTotals(p, computedCardX){
+    var exp = p.expenses.reduce(function(s,i){return s+effectiveAmount(i, computedCardX);},0);
+    var inv = p.investments.reduce(function(s,i){return s+(Number(i.amount)||0);},0);
+    return {exp:exp, inv:inv, remaining:(Number(p.income)||0) - exp - inv};
+  }
+  // Older saved data won't have the cardXAuto flag yet - link the first item
+  // literally named "CardX" in each period so the feature turns on automatically.
+  function migrateCardXAuto(state){
+    state.periods.forEach(function(p){
+      var hasAuto = p.expenses.some(function(i){ return i.cardXAuto; });
+      if(hasAuto) return;
+      var match = p.expenses.find(function(i){ return (i.name||"").trim().toLowerCase() === "cardx"; });
+      if(match) match.cardXAuto = true;
+    });
+  }
+
+  function renderLineRow(item, idx, path, accentClass, opts){
+    opts = opts || {};
+    var isAuto = !!item.cardXAuto;
+    var displayAmount = isAuto ? (opts.computedCardX||0) : item.amount;
+    var linkBtn = opts.linkable ? (
+      '<button class="link-btn' + (isAuto?' on':'') + '" data-action="toggle-cardx-link" data-path="' + path + '" data-idx="' + idx + '" ' +
+        'title="' + (isAuto ? 'ผูกกับยอดบัตรเครดิตอัตโนมัติอยู่ (คลิกเพื่อยกเลิก)' : 'ผูกรายการนี้กับยอดผ่อนบัตรเครดิตอัตโนมัติ') + '">' + ICONS.link + '</button>'
+    ) : '';
+    return '' +
+      '<div class="line-row' + (isAuto?' auto-row':'') + '">' +
+        linkBtn +
+        '<input class="name" data-bind="' + path + '.' + idx + '.name" value="' + esc(item.name) + '" placeholder="รายการ" />' +
+        (isAuto ? '<span class="auto-badge">อัตโนมัติ</span>' : '') +
+        '<div class="amt"><span>฿</span><input class="amount ' + accentClass + '" type="number" data-bind="' + path + '.' + idx + '.amount" value="' + displayAmount + '"' + (isAuto?' disabled':'') + ' /></div>' +
+        '<button class="rm" data-action="remove-item" data-path="' + path + '" data-idx="' + idx + '">' + ICONS.trash + '</button>' +
+      '</div>';
+  }
+
+  function renderPeriod(p, pIdx, computedCardX){
+    var t = periodTotals(p, computedCardX);
+    var expPath = "periods." + pIdx + ".expenses";
+    var invPath = "periods." + pIdx + ".investments";
+    var rows = p.expenses.map(function(it,i){ return renderLineRow(it, i, expPath, "red", {linkable:true, computedCardX:computedCardX}); }).join("");
+    var invRows = p.investments.map(function(it,i){ return renderLineRow(it, i, invPath, "green"); }).join("");
+    return '' +
+    '<div class="card">' +
+      '<div class="p-head">' +
+        '<div class="left"><span class="serif" style="font-size:15px">' + esc(p.label) + '</span>' +
+        '<input class="daylabel" data-bind="periods.' + pIdx + '.dayLabel" value="' + esc(p.dayLabel) + '" /></div>' +
+        '<div class="income"><span>เงินเข้างวดนี้</span><span>฿</span>' +
+          '<input type="number" data-bind="periods.' + pIdx + '.income" value="' + p.income + '" /></div>' +
+      '</div>' +
+      '<div class="section">' +
+        '<div class="section-title">' + ICONS.wallet + ' ค่าใช้จ่าย</div>' +
+        '<div class="link-hint">' + ICONS.link + ' คลิกไอคอนโซ่ที่รายการใดก็ได้ เพื่อผูกยอดกับบัตรเครดิตที่ยังผ่อนไม่หมด — พอผ่อนครบจะหักออกให้เองอัตโนมัติ</div>' +
+        rows +
+        '<button class="add-line" data-action="add-item" data-path="' + expPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
+        '<div class="total-row"><span>รวมค่าใช้จ่าย</span><b class="mono" style="color:#B3261E">฿' + thb(t.exp) + '</b></div>' +
+      '</div>' +
+      '<div class="section" style="border-top:1px solid #EEEFE9">' +
+        '<div class="section-title">' + ICONS.piggy + ' เงินลงทุน</div>' +
+        invRows +
+        '<button class="add-line" data-action="add-item" data-path="' + invPath + '">' + ICONS.plus + ' เพิ่มรายการ</button>' +
+        '<div class="total-row"><span>รวมเงินลงทุน</span><b class="mono" style="color:#1F7A53">฿' + thb(t.inv) + '</b></div>' +
+      '</div>' +
+      '<div class="remain"><span>คงเหลือหลังหักทุกอย่าง</span><span class="val mono" style="color:' + (t.remaining<0?'#B3261E':'#1E293B') + '">฿' + thb(t.remaining) + '</span></div>' +
+    '</div>';
+  }
+
+  function renderCard(c, cIdx){
+    var st = cardStatus(c);
+    var stamps = c.months.map(function(m, mIdx){
+      return '' +
+      '<div class="stamp-wrap">' +
+        '<button class="stamp" data-action="toggle-month" data-cidx="' + cIdx + '" data-midx="' + mIdx + '">' +
+          '<span class="circle' + (m.paid?' paid':'') + '">' + esc(m.label) + '</span>' +
+          '<span class="cap' + (m.paid?' paid':'') + '">' + (m.paid?'จ่ายแล้ว':'รอจ่าย') + '</span>' +
+        '</button>' +
+        '<button class="stamp-rm" data-action="remove-month" data-cidx="' + cIdx + '" data-midx="' + mIdx + '">×</button>' +
+      '</div>';
+    }).join("");
+
+    var body = c.open ? ('' +
+      '<div class="stamps">' + stamps +
+        '<div class="add-month">' +
+          '<input type="text" placeholder="ม/ปี" id="newmonth-' + cIdx + '" />' +
+          '<button data-action="add-month" data-cidx="' + cIdx + '">+ งวด</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ct-remain"><span>ยอดคงเหลือ</span><span class="val mono">฿' + thb(st.remaining) + '</span></div>'
+    ) : '';
+
+    return '' +
+    '<div class="card">' +
+      '<div class="ct-head">' +
+        '<div class="left">' + ICONS.card +
+          '<input class="cname" data-bind="cards.' + cIdx + '.name" value="' + esc(c.name) + '" />' +
+          '<input class="cnote" data-bind="cards.' + cIdx + '.note" value="' + esc(c.note) + '" placeholder="หมายเหตุ" />' +
+          '<span class="interest">ดอก <input style="width:34px;background:transparent;border:none;border-bottom:1px dotted rgba(30,41,59,.25);outline:none;font-size:10px;color:rgba(30,41,59,.5)" data-bind="cards.' + cIdx + '.interest" value="' + esc(c.interest) + '" /></span>' +
+        '</div>' +
+        '<button class="toggle" data-action="toggle-card-open" data-cidx="' + cIdx + '">' + (c.open?ICONS.chevUp:ICONS.chevDown) + '</button>' +
+      '</div>' +
+      '<div class="ct-sum">' +
+        '<span>ยอดรวม <input type="number" data-bind="cards.' + cIdx + '.totalAmount" value="' + c.totalAmount + '" /></span>' +
+        '<span>/เดือน <input type="number" data-bind="cards.' + cIdx + '.monthlyAmount" value="' + c.monthlyAmount + '" /></span>' +
+        '<button class="rmcard" data-action="remove-card" data-cidx="' + cIdx + '">' + ICONS.trash + ' ลบบัตร</button>' +
+      '</div>' +
+      '<div class="progress-wrap">' +
+        '<div class="progress-labels"><span>จ่ายแล้ว ' + st.paidCount + '/' + c.months.length + ' งวด</span><span>' + st.pct + '%</span></div>' +
+        '<div class="progress-bar"><div class="progress-fill" style="width:' + st.pct + '%"></div></div>' +
+      '</div>' +
+      body +
+    '</div>';
+  }
+
+  function render(){
+    var netSalary = state.salary * (1 - state.ssoPercent/100);
+    var totalOutstanding = state.cards.reduce(function(s,c){ return s + cardStatus(c).remaining; },0);
+
+    var computedCardX = cardXPerPeriod(state);
+
+    var html = '' +
+    '<div class="cover"><div class="cover-inner">' +
+      '<div class="cover-top">' +
+        '<div><div class="eyebrow">สมุดบัญชีรายรับ-รายจ่าย</div><h1 class="serif">งบประมาณรายเดือน</h1></div>' +
+        '<button class="reset-btn" data-action="reset">' + ICONS.reset + ' รีเซ็ต</button>' +
+      '</div>' +
+      '<div class="stat-grid">' +
+        '<div><div class="stat-label">เงินเดือน</div><div class="stat-value">฿<input type="number" data-bind="salary" value="' + state.salary + '" /></div></div>' +
+        '<div><div class="stat-label">หักประกันสังคม</div><div class="stat-value"><input type="number" data-bind="ssoPercent" value="' + state.ssoPercent + '" style="width:40px" />%</div></div>' +
+        '<div><div class="stat-label">เงินเดือนสุทธิ</div><div class="stat-value mono">฿' + thb(netSalary) + '</div></div>' +
+        '<div><div class="stat-label">บัตรเครดิตคงค้างรวม</div><div class="stat-value mono" style="color:#B3261E">฿' + thb(totalOutstanding) + '</div></div>' +
+      '</div>' +
+    '</div></div>' +
+    '<div class="wrap">' +
+      '<div id="save-status" class="save-status"></div>' +
+      '<div class="periods-grid">' + state.periods.map(function(p,i){ return renderPeriod(p, i, computedCardX); }).join("") + '</div>' +
+      '<div class="cards-header"><h2 class="sub serif">ผ่อนบัตรเครดิต</h2>' +
+        '<button class="add-card-btn" data-action="add-card">' + ICONS.plus + ' เพิ่มบัตร</button></div>' +
+      '<div class="cards-list">' + state.cards.map(renderCard).join("") + '</div>' +
+    '</div>';
+
+    document.getElementById("app").innerHTML = html;
+    renderStatusOnly();
+  }
+
+  function handleClick(e){
+    var btn = e.target.closest("[data-action]");
+    if(!btn) return;
+    var action = btn.getAttribute("data-action");
+
+    if(action === "toggle-cardx-link"){
+      var lpath = btn.getAttribute("data-path"), lidx = +btn.getAttribute("data-idx");
+      var larr = getPath(state, lpath);
+      var target = larr[lidx];
+      var turningOn = !target.cardXAuto;
+      if(turningOn){
+        var computedNow = cardXPerPeriod(state);
+        larr.forEach(function(it){ it.cardXAuto = false; }); // only one linked row per period
+        target.cardXAuto = true;
+        target.amount = computedNow;
+      } else {
+        target.cardXAuto = false;
+      }
+    } else if(action === "remove-item"){
+      var path = btn.getAttribute("data-path"), idx = +btn.getAttribute("data-idx");
+      getPath(state, path).splice(idx,1);
+    } else if(action === "add-item"){
+      var path2 = btn.getAttribute("data-path");
+      getPath(state, path2).push({id:uid(), name:"", amount:0});
+    } else if(action === "toggle-month"){
+      var c = state.cards[+btn.getAttribute("data-cidx")];
+      var m = c.months[+btn.getAttribute("data-midx")];
+      m.paid = !m.paid;
+    } else if(action === "remove-month"){
+      var c2 = state.cards[+btn.getAttribute("data-cidx")];
+      c2.months.splice(+btn.getAttribute("data-midx"),1);
+    } else if(action === "add-month"){
+      var cidx = +btn.getAttribute("data-cidx");
+      var input = document.getElementById("newmonth-" + cidx);
+      var val = input ? input.value.trim() : "";
+      if(!val) return;
+      state.cards[cidx].months.push({id:uid(), label:val, paid:false});
+    } else if(action === "toggle-card-open"){
+      var c3 = state.cards[+btn.getAttribute("data-cidx")];
+      c3.open = !c3.open;
+    } else if(action === "remove-card"){
+      state.cards.splice(+btn.getAttribute("data-cidx"),1);
+    } else if(action === "add-card"){
+      state.cards.push({id:uid(), name:"บัตรใหม่", note:"", totalAmount:0, monthlyAmount:0, interest:"0%", open:true, months:[]});
+    } else if(action === "reset"){
+      if(confirm("ล้างข้อมูลทั้งหมดและเริ่มใหม่ตามค่าเริ่มต้น?")){ state = defaultData(); }
+      else return;
+    }
+    save();
+    render();
+  }
+
+  function handleChange(e){
+    var el = e.target;
+    var bind = el.getAttribute && el.getAttribute("data-bind");
+    if(!bind) return;
+    var value = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
+    setPath(state, bind, value);
+    save();
+  }
+
+  document.addEventListener("click", handleClick);
+  document.addEventListener("change", handleChange);
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
