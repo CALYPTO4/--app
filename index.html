@@ -8,6 +8,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="งบประมาณ" />
 <meta name="theme-color" content="#F5F6F2" />
+<!-- ป้องกันการจำแคชเมื่อเปิดจากหน้าโฮมสกรีน -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
 <title>สมุดบัญชีงบประมาณ</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231E293B'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23F5F6F2' font-family='sans-serif'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E" />
@@ -209,7 +214,7 @@
         saveStatus = "saved";
       }catch(e){ saveStatus = "error"; }
       renderStatusOnly();
-    }, 250);
+    }, 150);
   }
   function renderStatusOnly(){
     var el = document.getElementById("save-status");
@@ -449,7 +454,6 @@
     if(!bind) return;
     var value = el.type === "number" ? (parseFloat(el.value) || 0) : el.value;
 
-    // กรณีแก้ไขช่อง amount ของรายการค่าใช้จ่ายหรือเงินลงทุนโดยตรง ให้ระบุตำแหน่งที่แน่นอนเพื่อไม่ให้ข้อมูลสลับกัน
     if(bind.indexOf(".expenses.") !== -1 || bind.indexOf(".investments.") !== -1){
       var pidx = el.getAttribute("data-path");
       var idx = el.getAttribute("data-idx");
@@ -464,7 +468,13 @@
     }
 
     save();
-    updateLiveTotals();
+    
+    // บังคับเรนเดอร์ใหม่ทั้งหน้าทันทีเมื่อมีการเปลี่ยนแปลงโครงสร้างตัวเลขบัตรเครดิต เพื่อป้องกันปัญหามือถือจำค่าเก่า
+    if(bind.indexOf("cards.") !== -1 || bind.indexOf("salary") !== -1 || bind.indexOf("ssoPercent") !== -1){
+      render();
+    } else {
+      updateLiveTotals();
+    }
   }
 
   function updateLiveTotals(){
@@ -477,16 +487,14 @@
 
       var expInputs = cardEl.querySelectorAll(".section:nth-of-type(1) input.amount");
       var totalExp = 0;
-      expInputs.forEach(function(input, itemIdx){
-        var val = parseFloat(input.value) || 0;
-        totalExp += val;
+      expInputs.forEach(function(input){
+        totalExp += (parseFloat(input.value) || 0);
       });
 
       var invInputs = cardEl.querySelectorAll(".section:nth-of-type(2) input.amount");
       var totalInv = 0;
-      invInputs.forEach(function(input, itemIdx){
-        var val = parseFloat(input.value) || 0;
-        totalInv += val;
+      invInputs.forEach(function(input){
+        totalInv += (parseFloat(input.value) || 0);
       });
 
       var incomeInput = cardEl.querySelector(".p-head .income input");
